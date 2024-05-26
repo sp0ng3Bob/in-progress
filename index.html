@@ -1,0 +1,71 @@
+<!--
+
+	COORDINATE AXES: -> CANVAS
+	(1) Display a scene with default coordinate axes, where each axis is colored 
+	(x-axis in red, y-axis in green, z-axis in blue).
+
+	LOAD MODEL AND MODEL CONTROLS: -> MODEL 
+	(2) Load 3D models in glTF 2.0 format and position them in space 
+	(with options for translation, rotation, and scaling).
+
+	MODEL PROPERTIES: -> MODEL
+	(3) Display model properties: number of vertices, number of indices, and the size of the bounding box.
+
+	PROCEDURAL GEOMETRIES: -> PROCEDURAL GEOMETRY
+	(4) Add procedurally generated objects (plane, cube, sphere, torus).
+
+	CAMERA CONTROLS: -> CAMERAS
+	(5) Allow camera position and rotation control using mouse or keyboard input, 
+	with the ability to change the camera's focal point.
+
+	LIGHTS: -> LIGHTS
+	(6) Place point lights in the scene, with adjustable parameters for color, 
+	intensity, and attenuation (constant, linear, quadratic attenuation).
+	(7) Define the lighting model (Lambert and Phong) and shading parameters 
+	(diffuse and specular color, shininess) for each object.
+
+	FRAGMENT SHADER: ->
+	(8) Implement per-fragment lighting and shading calculations.
+
+	TEXTURES: -> MODEL.TEXTURES
+	(9) Assign textures to each object individually, with options for 
+	texture coordinate mapping (input file coordinates, planar mapping, 
+	cylindrical mapping, spherical mapping), and allow translation, rotation, 
+	scaling, and projection direction for UV coordinates.
+
+	GLOBALS:
+	(10) Provide a global setting to control texture wrapping modes (CLAMP_TO_EDGE, REPEAT, MIRRORED_REPEAT).
+	(11) Provide a global setting to control texture filtering modes (NEAREST, LINEAR) and mipmapping options.
+	(12) Allow global enabling and disabling of mipmaps.
+
+-->
+
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+        <title>90 - Loading glTF files - ES6/WebGL 2.0 Examples</title>
+
+        <link rel="stylesheet" type="text/css" href="./src/styles/style.css">
+
+        <script type="importmap">
+            {
+                "imports": {
+                    "glMatrix": "./src/lib/glMatrix/index.js"
+                }
+            }
+        </script>
+        
+        <script type="module" src="index.js"></script>
+    </head>
+    <body>
+        <div class="fullscreen">
+            <canvas id="mainCanvas"></canvas>
+        </div>
+        <div class="miniscreen">
+          <canvas id="axesCanvas"></canvas>
+        </div>
+    </body>
+</html>
