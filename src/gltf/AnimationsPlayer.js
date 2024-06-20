@@ -1,52 +1,67 @@
-import { Animation } from "./Animation.js"
+//import { mat4 } from 'gl-matrix'
 
-export class AnimationsPlayer { //animation sampler
+export class AnimationsPlayer {
 
-  constructor(options = {}) {
-    this.animationsNames = options.names || {}
-      this.animationClips = options.clips || [];
+  constructor() {
+    this.animations = undefined
+    this.currentTime = 0
+    this.isPlaying = false
+    this.isPaused = false
+    this.animationsToPlay = new Set()
+    this.animationsCount = 0
   }
 
-  // Add an animation clip to the list
-  addClip(clip) {
-      this.animationClips.push(clip);
-      this.animationsNames[this.animationClips.length-1] = clip.name
+  addAnimations(animations) {
+    this.animations = animations
+    this.animationsToPlay.clear()
+    this.animationsCount = this.animations.length
   }
 
-  // Update the animations based on the elapsed time
+  toggleAnimationToPlaylist(animationIndex) {
+    if (this.animationsToPlay.has(animationIndex)) {
+      this.animationsToPlay.delete(animationIndex)
+    } else {
+      this.animationsToPlay.add(animationIndex)
+    }
+  }
+
+  play() {
+    this.isPlaying = true
+    this.isPaused = false
+  }
+
+  pause() {
+    this.isPaused = true
+    this.isPlaying = false
+  }
+
+  stop() {
+    this.isPaused = false
+    this.isPlaying = false
+    this.currentTime = 0
+    this.resetPositions()
+  }
+
   update(deltaTime) {
-      for (const clip of this.animationClips) {
-          clip.update(deltaTime);
-      }
+    //if (!this.isPlaying || !this.currentAnimation) return
+    if (!this.isPlaying) return
+
+    this.currentTime += deltaTime
+    for (const animationIndex of this.animationsToPlay.keys()) {
+      this.animations[animationIndex].update(this.currentTime)
+    }
   }
 
-  // Play a specific animation clip
-  playClip(clipName) {
-      const clip = this.animationClips.find(clip => clip.name === clipName);
-      if (clip) {
-          clip.play();
-      } else {
-          console.error(`Animation clip not found: ${clipName}`);
-      }
+  resetPositions() {
+    this.animations.forEach(animation => animation.update(this.currentTime))
   }
 
-  // Pause a specific animation clip
-  pauseClip(clipName) {
-      const clip = this.animationClips.find(clip => clip.name === clipName);
-      if (clip) {
-          clip.pause();
-      } else {
-          console.error(`Animation clip not found: ${clipName}`);
-      }
-  }
-
-  // Stop a specific animation clip
-  stopClip(clipName) {
-      const clip = this.animationClips.find(clip => clip.name === clipName);
-      if (clip) {
-          clip.stop();
-      } else {
-          console.error(`Animation clip not found: ${clipName}`);
-      }
+  delete() {
+    this.animations = undefined
+    this.currentTime = 0
+    this.isPlaying = false
+    this.isPaused = false
+    this.animationsToPlay.clear()
+    this.animationsCount = 0
   }
 }

@@ -42,30 +42,35 @@
 
 <!DOCTYPE html>
 <html>
-    <head>
-        <meta charset="utf-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-        <title>90 - Loading glTF files - ES6/WebGL 2.0 Examples</title>
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-        <link rel="stylesheet" type="text/css" href="./src/styles/style.css">
+	<title>90 - Loading glTF files - ES6/WebGL 2.0 Examples</title>
 
-        <script type="importmap">
+	<link rel="stylesheet" type="text/css" href="./src/styles/style.css">
+
+	<script type="importmap">
             {
                 "imports": {
                     "glMatrix": "./src/lib/glMatrix/index.js"
                 }
             }
         </script>
-        
-        <script type="module" src="index.js"></script>
-    </head>
-    <body>
-        <div class="fullscreen">
-            <canvas id="mainCanvas"></canvas>
-        </div>
-        <div class="miniscreen">
-          <canvas id="axesCanvas"></canvas>
-        </div>
-    </body>
+
+	<script type="module" src="./index.js"></script>
+</head>
+
+<body>
+	<div class="fullscreen">
+		<canvas id="mainCanvas"></canvas>
+	</div>
+	<!--
+		<div class="miniscreen">
+			<canvas id="axesCanvas"></canvas>
+		</div>
+	-->
+</body>
+
 </html>

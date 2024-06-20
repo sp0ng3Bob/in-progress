@@ -6,6 +6,7 @@ import { Node } from "./src/gltf/Node.js"
 import { Texture } from "./src/gltf/Texture.js"
 import { PerspectiveCamera } from "./src/gltf/PerspectiveCamera.js"
 import { OrthographicCamera } from "./src/gltf/OrthographicCamera.js"
+import { AnimationsPlayer } from "./src/gltf/AnimationsPlayer.js"
 
 import { Axes } from "./src/helpers/Axes.js"
 import { Controls } from "./src/helpers/Controls.js"
@@ -25,6 +26,7 @@ const quat = glMatrix.quat
 const m = "./src/models/Duck.gltf"
 const m0 = "./src/models/0Suzanne/Suzanne.gltf"
 const m1 = "./src/models/1Avocado/glTF/Avocado.gltf"
+const m101 = "./src/models/1Avocado/glTF-Binary/Avocado.glb"
 const m2 = "./src/models/2Helmet/FlightHelmet.gltf"
 const m3 = "./src/models/3Boombox/BoomBox.gltf"
 const m4 = "./src/models/4PBR/Box With Spaces.gltf"
@@ -37,14 +39,18 @@ const m10 = "./src/models/10AnimSkin/SimpleSkin.gltf"
 const m11 = "./src/models/11MorphTest/MorphPrimitivesTest.gltf"
 const m12 = "./src/models/12UltimateTest/MorphStressTest.gltf"
 const m13 = "./src/models/13ColorEnc/TextureEncodingTest.gltf"
+const m14 = "./src/models/14AnimTri/AnimatedTriangle.gltf"
+const m15 = "./src/models/15AnimInter/InterpolationTest.gltf" //glb" //?? (GL_INVALID_OPERATION: Insufficient buffer size.)
+const m16 = "./src/models/16FoxMultiAnim/Fox.gltf"
+const m99 = "./src/models/99Unicode/Unicode❤♻Test.glb"
 const noModel = ""
-const model = noModel //m //m1
-const modelList = { "-": noModel, "Duck": m, "Suzanne": m0, "Avocado": m1, "Fight Helmet": m2, "BoomBox": m3, "Box": m4, "Animated Cube": m5, "Rigged Simple": m6, "Alpha Test": m7, "Morph Cube": m8, "BoxAnimated": m9, "Simple Skin": m10, "Morph Test": m11, "Stress Test": m12, "Color encoding": m13 }
-const scenesList = {}
-const camerasList = {}
+let model = noModel //m //m1
+const modelList = { "-": noModel, "Duck": m, "Suzanne": m0, "Avocado": m1, "AvocadoBIN": m101, "Fight Helmet": m2, "BoomBox": m3, "Box": m4, "Animated Cube": m5, "Rigged Simple": m6, "Alpha Test": m7, "Morph Cube": m8, "BoxAnimated": m9, "Simple Skin": m10, "Morph Test": m11, "Stress Test": m12, "Color encoding": m13, "Simple rotation anim": m14, "Anim interpolations": m15, "Fox Multi Anim": m16, "Unicode test": m99 }
+let scenesList = {}
+let camerasList = {}
 const globalLightsList = {}
 const lightAttenuationList = { "Constant": 0, "Linear": 1, "Quadratic": 2 }
-const proceduralModelsList = [] //{}
+let proceduralModelsList = [] //{}
 const mipmapsList = { "NEAREST_MIPMAP_NEAREST": 9984, "NEAREST_MIPMAP_LINEAR": 9986, "LINEAR_MIPMAP_NEAREST": 9985, "LINEAR_MIPMAP_LINEAR": 9987 }
 const wrappingList = { "Clamp to edge": 33071, "Mirrored repeat": 33648, "Repeat": 10497 }
 const filteringList = { "Linear": 9729, "Nearest": 9728 }
@@ -52,7 +58,7 @@ const filteringList = { "Linear": 9729, "Nearest": 9728 }
 export class App extends Application {
   init() {
     this.gui = null
-    
+
     this.state = {
       // Canvas
       axesShown: true,
@@ -78,6 +84,10 @@ export class App extends Application {
       //Cameras
       selectedCamera: 0,
 
+      //Animations
+      animationPlaybackSpeed: 1,
+      animationsList: {},
+
       //Lights
       lightsList: [],
 
@@ -91,11 +101,13 @@ export class App extends Application {
     }
 
     // Axes helper view
-    this.axes = new Axes({ 
-      axesCanvas: document.querySelector("#mainCanvas"),
-      //axesCanvas: document.querySelector("#axesCanvas"),
-      program: this.renderer.programs.axes 
+    this.axes = new Axes({
+      glContext: this.gl,
+      program: this.renderer.programs.axes
     })
+
+    this.animationsPlayer = new AnimationsPlayer()
+    this.frameCount = 1
 
     this.initGUI()
 
@@ -114,8 +126,8 @@ export class App extends Application {
     this.cameraTheta = 0.0   // Initial angle in the XY plane
     this.cameraPhi = Math.PI / 2
   }
-		
-	initGUI () {
+
+  initGUI() {
     const gui = this.gui = new GUI({ width: 350 }) //({autoPlace: false, width: 260, hideable: true})
 
     // Canvas controls.
@@ -124,7 +136,7 @@ export class App extends Application {
     const canvasFolder = gui.addFolder("Canvas options")
     const axesHelper = canvasFolder.add(this.state, "axesShown") //.listen() //.onChange(this.toggleAxesInScene)
     const bgColor = canvasFolder.addColor(this.state, "backgroundColor").onChange(this.setClearColor.bind(this))
-    
+
     // Models controls.
     /* (2) Load 3D models in glTF 2.0 format and position them in space 
     (with options for translation, rotation, and scaling). */
@@ -147,7 +159,7 @@ export class App extends Application {
     // Model scenes controls.
     this.sceneFolder = this.modelsFolder.addFolder("Scenes")
     this.sceneFolder.domElement.style.display = "none"
-    
+
     // Model cameras controls.
     this.cameraFolder = this.modelsFolder.addFolder("Cameras")
     this.cameraFolder.domElement.style.display = "none"
@@ -163,7 +175,7 @@ export class App extends Application {
 
     // User camera controls.
     /* (5) Allow camera position and rotation control using mouse or keyboard input, 
-	         with the ability to change the camera"s focal point. */
+           with the ability to change the camera"s focal point. */
 
     // Lighting controls.
     /* (6) Place point lights in the scene, with adjustable parameters for color, 
@@ -192,6 +204,9 @@ export class App extends Application {
     // Animation controls.
     //https://github.com/Itee/three-full/blob/7061c7cd93f194285325d163a48676604eca66fd/sources/loaders/GLTFLoader.js#L1530
     this.animFolder = this.modelsFolder.addFolder("Model Animations")
+    this.playAnimationsButton = this.animFolder.add(this, "playAnimations").name("PLAY")
+    this.animFolder.add(this, "stopAnimations").name("STOP")
+    this.animFolder.add(this.state, "animationPlaybackSpeed", 1, 10, 1).name("Animation slowness")
     this.animFolder.domElement.style.display = "none"
 
     // Procedural geo controls
@@ -249,12 +264,12 @@ export class App extends Application {
 
   updateGUI() {
     // Model info
-    const bb = {  
-                x: (this.glTFBox.max[0] - this.glTFBox.min[0]).toFixed(3), 
-                y: (this.glTFBox.max[1] - this.glTFBox.min[1]).toFixed(3),
-                z: (this.glTFBox.max[2] - this.glTFBox.min[2]).toFixed(3)
-               }
-    
+    const bb = {
+      x: (this.glTFBox.max[0] - this.glTFBox.min[0]).toFixed(3),
+      y: (this.glTFBox.max[1] - this.glTFBox.min[1]).toFixed(3),
+      z: (this.glTFBox.max[2] - this.glTFBox.min[2]).toFixed(3)
+    }
+
     this.state.boundingBox = `x: ${bb.x} | y: ${bb.y} | z: ${bb.z}`
     this.state.numberOfVertices = this.loader.gltf.accessors[this.glTFPosition].count //number of vertices
     //this.state.numberOfMeshes = this.loader.gltf.meshes.length
@@ -262,19 +277,38 @@ export class App extends Application {
     this.infoFolder.domElement.style.display = ""
 
     // Scenes
-    for (let ctrl of this.sceneFolder.__controllers) { this.sceneFolder.remove(ctrl) }
+    //for (let ctrl of this.sceneFolder.__controllers) { this.sceneFolder.remove(ctrl) }
+    while (this.sceneFolder.__controllers.length > 0) { this.sceneFolder.remove(this.sceneFolder.__controllers[0]) }
     this.sceneFolder.add(this.state, "selectedScene", scenesList).onChange(this.changeScene.bind(this))
     this.sceneFolder.domElement.style.display = ""
 
     // Cameras
-    for (let ctrl of this.cameraFolder.__controllers) { this.cameraFolder.remove(ctrl) }
+    //for (let ctrl of this.cameraFolder.__controllers) { this.cameraFolder.remove(ctrl) }
+    while (this.cameraFolder.__controllers.length > 0) { this.cameraFolder.remove(this.cameraFolder.__controllers[0]) }
     //if (Object.keys(camerasList).length > 0) {
-      this.cameraFolder.add(this.state, "selectedCamera", camerasList).onChange(this.changeCamera.bind(this))
-      this.cameraFolder.domElement.style.display = ""
+    this.cameraFolder.add(this.state, "selectedCamera", camerasList).onChange(this.changeCamera.bind(this))
+    this.cameraFolder.domElement.style.display = ""
     //} else {
     //   this.cameraFolder.domElement.style.display = "none"
     // }
-    
+
+    // Animations¸
+    //for (let ctrl of this.animFolder.__controllers) { this.animFolder.remove(ctrl) }
+    if (this.animFolder.__controllers.length > 3) {
+      let index = this.animFolder.__controllers.length - 1
+      while (index > 2) {
+        this.animFolder.remove(this.animFolder.__controllers[index])
+        index--
+      }
+    }
+    if (this.animationsPlayer.animations.length) {
+      for (const animationIndex in this.scene.animations) {
+        this.animFolder.add(this.state.animationsList, animationIndex).name(this.scene.animations[animationIndex].name).listen().onChange(this.queueAnimation.bind(this, animationIndex))
+      }
+      this.animFolder.domElement.style.display = ""
+    } else {
+      this.animFolder.domElement.style.display = "none"
+    }
 
     // Globals
     this.state.wrappingModeS = 33071
@@ -288,9 +322,6 @@ export class App extends Application {
     // this.morphCtrls.length = 0
     // this.morphFolder.domElement.style.display = "none"
 
-    // this.animCtrls.forEach((ctrl) => ctrl.remove())
-    // this.animCtrls.length = 0
-    // this.animFolder.domElement.style.display = "none"
 
 
     /*if (morphMeshes.length) {
@@ -300,7 +331,7 @@ export class App extends Application {
           const nameCtrl = this.morphFolder.add({name: mesh.name || "Untitled"}, "name")
           this.morphCtrls.push(nameCtrl)
         }
-        for (let i = 0 i < mesh.morphTargetInfluences.length i++) {
+        for (let i = 0; i < mesh.morphTargetInfluences.length; i++) {
           const ctrl = this.morphFolder.add(mesh.morphTargetInfluences, i, 0, 1, 0.01).listen()
           Object.keys(mesh.morphTargetDictionary).forEach((key) => {
             if (key && mesh.morphTargetDictionary[key] === i) ctrl.name(key)
@@ -339,7 +370,7 @@ export class App extends Application {
     }*/
 
     //Lights
-    for (let lightIndex in this.state.lightsList) {
+    /*for (let lightIndex in this.state.lightsList) {
       let lightFolder = this.lightsListFolder.addFolder(lightIndex) //`${lightIndex}. light`)
       lightFolder.add(this.state.lightsList[lightIndex], "position") // position,
       lightFolder.addColor(this.state.lightsList[lightIndex], "color") // color,
@@ -348,29 +379,29 @@ export class App extends Application {
       //lightFolder.add(this.lightsList[lightIndex], "intensity") // intensity
       //lightFolder.add(this.lightsList[lightIndex], "attenuation", lightAttenuationList) // attenuation (constant, linear, quadratic attenuation)
       //lightFolder.add(light, "addPointLight").name("ADD POINT LIGHT")
-    }
+    }*/
   }
 
-	updateDisplay() {
-		
-	}
+  updateDisplay() {
+
+  }
 
   setClearColor(color) {
     this.renderer.changeClearColor(color)
     this.axes.changeClearColor(color)
   }
-	
+
 
   /* LIGHTS */
   addPointLight() {
-    console.log(this.state.addLightColor,this.state.addLightPosition,this.state.addLightIntensity,this.state.addLightAttenuation)
+    console.log(this.state.addLightColor, this.state.addLightPosition, this.state.addLightIntensity, this.state.addLightAttenuation)
   }
   /****************************************************************************************************************/
-  
+
 
   /* PROCEDURAL GEOMETRIES */
   addGeoPlane() {
-    proceduralModelsList.push(Geo.createPlane(this.gl, 1, [0,0,0], [170,170,170], "./src/models/1Avocado/glTF/Avocado_baseColor.png"))
+    proceduralModelsList.push(Geo.createPlane(this.gl, 1, [0, 0, 0], [170, 170, 170], "./src/models/1Avocado/glTF/Avocado_baseColor.png"))
   }
 
   addGeoCube() {
@@ -443,9 +474,45 @@ export class App extends Application {
     await this.setSceneAndCamera()
     //**/!*/!*!/*!/*!/*!/*!/!*/!*/!*/!*/!*/!*/!*!/*!/**!/!*/!*/*!/*!/*!*!/*!/*!/*!/*!/*/!*/!*/!*/!***********
     this.cameraRadius = this.camera.translation[2]  // Initial radius of the camera from the lookAt point
-    this.renderer.prepareScene(this.scene) //, model)
-    this.clips = this.loader.gltf.animations
+
+    this.renderer.prepareScene(this.scene)
+
+    if (this.animationsPlayer.isPlaying) {
+      this.stopAnimations()
+    }
+
+    if (this.scene.animations) {
+      (Object.keys(this.state.animationsList) ?? []).forEach(key => delete this.state.animationsList[key])
+      this.animationsPlayer.addAnimations(this.scene.animations)
+      for (const animation in this.animationsPlayer.animations) {
+        this.state.animationsList[animation] = true
+        this.animationsPlayer.toggleAnimationToPlaylist(animation)
+      }
+    } else {
+      this.animationsPlayer.delete()
+    }
+
     this.updateGUI()
+  }
+
+  playAnimations() {
+    if (this.animationsPlayer.isPaused || !this.animationsPlayer.isPlaying) {
+      this.animationsPlayer.play()
+      this.lastTime = performance.now()
+      this.playAnimationsButton.name("PAUSE")
+    } else {
+      this.animationsPlayer.pause()
+      this.playAnimationsButton.name("PLAY")
+    }
+  }
+
+  stopAnimations() {
+    this.animationsPlayer.stop()
+    this.playAnimationsButton.name("PLAY")
+  }
+
+  queueAnimation(animationIndex) {
+    this.animationsPlayer.toggleAnimationToPlaylist(animationIndex)
   }
 
   async setSceneAndCamera() {
@@ -460,11 +527,11 @@ export class App extends Application {
 
   extractPosIndBB(mesh) {
     this.glTFPosition = this.loader.gltf.meshes[mesh].primitives[0].attributes.POSITION
-    this.glTFIndices = this.loader.gltf.meshes[mesh].primitives[0].indices
-    this.glTFBox = {  
-                      "min": this.loader.gltf.accessors[this.glTFPosition].min,
-                      "max": this.loader.gltf.accessors[this.glTFPosition].max
-                   }
+    this.glTFIndices = this.loader.gltf.meshes[mesh].primitives[0].indices ?? 0
+    this.glTFBox = {
+      "min": this.loader.gltf.accessors[this.glTFPosition].min,
+      "max": this.loader.gltf.accessors[this.glTFPosition].max
+    }
   }
 
   async getScenes() {
@@ -496,7 +563,7 @@ export class App extends Application {
   }
 
   async loadCameras() {
-    let viewMatrix =  mat4.create()
+    let viewMatrix = mat4.create()
 
     if (this.glTFBox) { //glTF model selected and loaded
       const { min, max } = this.glTFBox
@@ -504,7 +571,7 @@ export class App extends Application {
       const modelSizeY = max[1] - min[1]
       const modelSizeZ = max[2] - min[2]
       const maxModelSize = Math.max(modelSizeX, modelSizeY, modelSizeZ)
-      this.controls.setZoom(maxModelSize/10)
+      this.controls.setZoom(maxModelSize / 10)
       /*this.state.eye = [
         0, //+ (min[0] + max[0]) / 2,
         0, //+ (min[1] + max[1]) / 2,
@@ -514,43 +581,43 @@ export class App extends Application {
       //mat4.lookAt(matrix, this.state.eye, this.state.lookingAt, [0, 1, 0])
       mat4.lookAt(viewMatrix, this.state.eye, [0,0,0], [0, 1, 0])*/
       //this.state.eye = [0, 0, 2]  // Assuming a positive Z coordinate here
-  
+
       // Set the look-at point to the center of the GLTF object
-      this.state.lookingAt = [(min[0] + max[0]) / 2, (min[1] + max[1]) / 2, (min[2] + max[2]) / 2] 
+      this.state.lookingAt = [(min[0] + max[0]) / 2, (min[1] + max[1]) / 2, (min[2] + max[2]) / 2]
       this.state.eye = [...this.state.lookingAt]
       this.state.eye[2] *= 3
-  
+
       // Calculate the view matrix using the eye and look-at point
       mat4.lookAt(viewMatrix, this.state.eye, this.state.lookingAt, [0, 1, 0])
-  
+
       const fov = 2 * Math.atan(maxModelSize / Math.abs(this.state.eye[2] * 2))
       const freeCamera = new PerspectiveCamera({
-        aspect : this.canvas.clientWidth / this.canvas.clientHeight,
-        fov    : fov,
-        near   : 0.001 //maxModelSize/20,
+        aspect: this.canvas.clientWidth / this.canvas.clientHeight,
+        fov: fov,
+        near: 0.001 //maxModelSize/20,
         //far    : maxModelSize*200
       })
       const vpMatrix = mat4.create()
       mat4.multiply(vpMatrix, freeCamera.matrix, viewMatrix)
       let options = {
-        "camera": freeCamera, 
+        "camera": freeCamera,
         "matrix": vpMatrix
       }
-      
+
       camerasList = {}
       this.cameras = []
-  
+
       let promises = await this.getCameras()
       let gltfCameras = await Promise.all(promises)
       for (let c of gltfCameras) { this.cameras.push(c) }
-  
+
       camerasList["Free camera"] = gltfCameras.length
       this.cameras.push(new Node(options))
-  
+
       this.camera = this.cameras[this.loader.defaultCamera]
-      this.freeCamera = this.cameras.length == 1 ? 0 : this.cameras.length-1 
+      this.freeCamera = this.cameras.length == 1 ? 0 : this.cameras.length - 1
       this.camera.lookingAt = this.state.lookingAt
-  
+
       // delete this or fix it ?!?!?!?!?!?!?!?!?!*!*?!*?*!?*!?*!*?!*!?*?!?*!?*!*!*?!*?!*?!*!?*!?*!?!*?!*!?*?!*?!*?*!?*!
       this.cameras[this.freeCamera].translation = [...this.state.eye] //this.state.eye[2]
       this.cameras[this.freeCamera].translation[2] = modelSizeZ == 0 ? 1.2 : modelSizeZ * 3 //this.state.eye[2]
@@ -558,23 +625,23 @@ export class App extends Application {
       //*?!*?!*!?*!?*!?!*!?*!?!*?!!*?!*!?!*?!*!?*!?!*?!*!?*!?!*!?*!?!*!?!*?! wtf ??
     } else {
       //this.state.lookingAt = [0,0,0]
-      mat4.lookAt(viewMatrix, [0, 0.5, 5], [0,0,0], [0, 1, 0])
+      mat4.lookAt(viewMatrix, [0, 0.5, 5], [0, 0, 0], [0, 1, 0])
       const freeCamera = new PerspectiveCamera()
       const vpMatrix = mat4.create()
       mat4.multiply(vpMatrix, freeCamera.matrix, viewMatrix)
       let options = {
-        "camera": freeCamera, 
+        "camera": freeCamera,
         "matrix": vpMatrix
       }
-      
+
       camerasList = {}
       this.cameras = []
       this.cameras.push(new Node(options))
-  
-      this.freeCamera = 0 
+
+      this.freeCamera = 0
       this.camera = this.cameras[0]
       camerasList["Free camera"] = 0
-      this.camera.lookingAt = [0,0,0]
+      this.camera.lookingAt = [0, 0, 0]
     }
   }
 
@@ -609,18 +676,31 @@ export class App extends Application {
 
   render() {
     if (this.renderer) {
-      if (this.state.rotateModelEnabled) { this.rotateModel(this.scene.nodes, [0,0.5,0]) } // over Y
-      
-      //if (this.state.rotateModelEnabled) {
-      //  this.controls.rotateCamera(this.camera)
-      //}
-      
+
+      // Animations
+      if (this.animationsPlayer.animations && this.animationsPlayer.isPlaying) {
+        const deltaTime = (performance.now() - this.lastTime) / 1000
+        this.lastTime = performance.now()
+        if (this.state.animationPlaybackSpeed <= this.frameCount) {
+          this.animationsPlayer.update(deltaTime)
+          this.frameCount = 1
+        } else {
+          this.frameCount++
+        }
+      }
+
+      //this.gl.clear(this.gl.COLOR_BUFFER_BIT | this.gl.DEPTH_BUFFER_BIT)
+
+      if (this.state.rotateModelEnabled) { this.rotateModel(this.scene.nodes, [0, 0.5, 0]) } // over Y
+
+      //if (this.state.rotateModelEnabled) { this.controls.rotateCamera(this.camera, [0,0.5,0]) } //over Y
+
       //this.lights()
       //this.renderer.prepareScene(this.scene)
       this.scene.geoNodes = proceduralModelsList
       this.renderer.render(this.scene, this.camera, this.lights())
-      if (this.state.axesShown) { this.axes.drawAxes(this.camera) }
-      
+
+      //if (this.state.axesShown) { this.axes.draw(this.camera) }
     }
   }
 
@@ -644,7 +724,7 @@ export class App extends Application {
       lightsPositions.push(...l.position)
       lightsColors.push(...l.color)
     }*/
-    
+
     return { lights } //, diffuse, specular, shine }
     //return { lightsPositions, lightsColors, diffuse, specular, shine }
   }
@@ -672,11 +752,11 @@ export class App extends Application {
     this.camera.translation[0] = lookAtPosition[0] + this.cameraRadius * Math.sin(this.cameraPhi) * Math.cos(this.cameraTheta)
     this.camera.translation[2] = lookAtPosition[2] + this.cameraRadius * Math.sin(this.cameraPhi) * Math.sin(this.cameraTheta)
     this.camera.translation[1] = lookAtPosition[1] + this.cameraRadius * Math.cos(this.cameraPhi)
-    
+
     /*this.camera.translation[0] = lookAtPosition[0] + this.camera.translation[2] * Math.sin(this.cameraPhi) * Math.cos(this.cameraTheta)
     this.camera.translation[2] = lookAtPosition[2] + this.camera.translation[2] * Math.sin(this.cameraPhi) * Math.sin(this.cameraTheta)
     this.camera.translation[1] = lookAtPosition[1] + this.camera.translation[2] * Math.cos(this.cameraPhi)*/
-    
+
     // Update the view matrix or set the camera position accordingly
     const viewMatrix = mat4.create()
     mat4.lookAt(viewMatrix, this.camera.translation, lookAtPosition, [0, 1, 0])
