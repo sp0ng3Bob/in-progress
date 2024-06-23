@@ -56,7 +56,7 @@ const wrappingList = { "Clamp to edge": 33071, "Mirrored repeat": 33648, "Repeat
 const filteringList = { "Linear": 9729, "Nearest": 9728 }
 
 export class App extends Application {
-  init() {
+  init(logsDOMElement) {
     this.gui = null
 
     this.state = {
@@ -108,6 +108,7 @@ export class App extends Application {
 
     this.animationsPlayer = new AnimationsPlayer()
     this.frameCount = 1
+    this.animationTimeLogs = logsDOMElement.querySelector("#animationTime")
 
     this.initGUI()
 
@@ -687,6 +688,7 @@ export class App extends Application {
         } else {
           this.frameCount++
         }
+        this.animationTimeLogs.textContent = this.animationsPlayer.getCurrentTime().toFixed(3)
       }
 
       //this.gl.clear(this.gl.COLOR_BUFFER_BIT | this.gl.DEPTH_BUFFER_BIT)

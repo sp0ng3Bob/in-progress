@@ -11,19 +11,59 @@ export class AnimationSampler {
     this.input = this.getAccessorData(options.input)
     this.output = this.getAccessorData(options.output)
     this.interpolation = options.interpolation ?? 'LINEAR'
+    this.cycleFinished = false
   }
 
   getAccessorData(accessor) {
     return new Float32Array(accessor.bufferView.buffer, accessor.bufferView.byteOffset, accessor.count * accessor.numComponents)
   }
 
-  interpolate(time) {
-    time = time % this.input.at(-1)
+  getStartingPosition() {
+    let position
+    if (this.path == "rotation") {
+      position = quat.fromValues(this.output.at(-4), this.output.at(-3), this.output.at(-2), this.output.at(-1))
+      //position = quat.fromValues(this.output.at(0), this.output.at(1), this.output.at(2), this.output.at(3))
+    } else if (this.path == "weights") {
+      position = vec2.fromValues(this.output.at(-2), this.output.at(-1))
+      //position = vec3.fromValues(this.output.at(0), this.output.at(1))
+    } else {
+      position = vec3.fromValues(this.output.at(-3), this.output.at(-2), this.output.at(-1))
+      //position = vec3.fromValues(this.output.at(0), this.output.at(1), this.output.at(2))
+    }
+    return position
+  }
 
-    for (let i = 0; i < this.input.length; i++) {
-      if (time >= this.input[i] && time < this.input[i + 1]) {
+  //https://registry.khronos.org/glTF/specs/2.0/glTF-2.0.html#appendix-c-interpolation
+  interpolate(time, i) { //(time, duration, i) {
+    //time = time % duration //this.input.at(-1)
+
+    let a, b
+    /*if (time <= this.input[0]) {
+      if (this.path == "rotation") {
+        b = quat.fromValues(this.output.at(0), this.output.at(1), this.output.at(2), this.output.at(3))
+      } else if (this.path == "weights") {
+        b = vec3.fromValues(this.output.at(0), this.output.at(1))
+      } else {
+        b = vec3.fromValues(this.output.at(0), this.output.at(1), this.output.at(2))
+      }
+      this.atInputIndex = 0
+      return [0, b]
+    }
+    else if (time >= this.input.at(-1)) {
+      if (this.path == "rotation") {
+        b = quat.fromValues(this.output.at(-4), this.output.at(-3), this.output.at(-2), this.output.at(-1))
+      } else if (this.path == "weights") {
+        b = vec3.fromValues(this.output.at(-2), this.output.at(-1))
+      } else {
+        b = vec3.fromValues(this.output.at(-3), this.output.at(-2), this.output.at(-1))
+      }
+      this.atInputIndex = this.input.length - 1
+      return [this.input.length - 1, b]
+    }*/
+
+    /*for (let i = 0; i < this.input.length - 1; i++) {
+      if (time >= this.input[i] && time <= this.input[i + 1]) {
         const t = (time - this.input[i]) / (this.input[i + 1] - this.input[i])
-        let a, b
         if (this.path == "rotation") {
           a = quat.fromValues(this.output[i * 4], this.output[i * 4 + 1], this.output[i * 4 + 2], this.output[i * 4 + 3])
           b = quat.fromValues(this.output[(i + 1) * 4], this.output[(i + 1) * 4 + 1], this.output[(i + 1) * 4 + 2], this.output[(i + 1) * 4 + 3])
@@ -34,23 +74,61 @@ export class AnimationSampler {
           a = vec3.fromValues(this.output[i * 3], this.output[i * 3 + 1], this.output[i * 3 + 2])
           b = vec3.fromValues(this.output[(i + 1) * 3], this.output[(i + 1) * 3 + 1], this.output[(i + 1) * 3 + 2])
         }
-        return this.interpolateValue(a, b, t, a.length)
+        this.atInputIndex = i
+        return [i + 1, this.interpolateValue(a, b, t, a.length)]
       }
-    }
-    if (this.path == "rotation") {
-      return quat.fromValues(this.output.at(-4), this.output.at(-3), this.output.at(-2), this.output.at(-1))
+    }*/
+
+    /*if (this.path == "rotation") {
+      b = quat.fromValues(this.output.at(-4), this.output.at(-3), this.output.at(-2), this.output.at(-1))
     } else if (this.path == "weights") {
-      return vec3.fromValues(this.output.at(-2), this.output.at(-1))
+      b = vec3.fromValues(this.output.at(-2), this.output.at(-1))
     } else {
-      return vec3.fromValues(this.output.at(-3), this.output.at(-2), this.output.at(-1))
+      b = vec3.fromValues(this.output.at(-3), this.output.at(-2), this.output.at(-1))
     }
+    this.atInputIndex = this.input.length - 1
+    return [this.input.length - 1, b]*/
+
+    //for (let i = 1; i < this.input.length; i++) {
+    //  if (time < this.input[i]) {
+
+    if (this.cycleFinished) {
+      if (this.path == "rotation") {
+        b = quat.fromValues(this.output.at(-4), this.output.at(-3), this.output.at(-2), this.output.at(-1))
+      } else if (this.path == "weights") {
+        b = vec2.fromValues(this.output.at(-2), this.output.at(-1))
+      } else {
+        b = vec3.fromValues(this.output.at(-3), this.output.at(-2), this.output.at(-1))
+      }
+      return b
+    }
+
+    /*if (i === this.input.length - 1) {
+      this.cycleFinished = true
+    }*/
+
+    const t = (time - this.input[i - 1]) / (this.input[i] - this.input[i - 1])
+    //let a, b
+    if (this.path == "rotation") {
+      a = quat.fromValues(this.output[(i - 1) * 4], this.output[(i - 1) * 4 + 1], this.output[(i - 1) * 4 + 2], this.output[(i - 1) * 4 + 3])
+      b = quat.fromValues(this.output[i * 4], this.output[i * 4 + 1], this.output[i * 4 + 2], this.output[i * 4 + 3])
+    } else if (this.path == "weights") {
+      a = vec2.fromValues(this.output[(i - 1) * 2], this.output[(i - 1) * 2 + 1])
+      b = vec2.fromValues(this.output[i * 2], this.output[i * 2 + 1])
+    } else {
+      a = vec3.fromValues(this.output[(i - 1) * 3], this.output[(i - 1) * 3 + 1], this.output[(i - 1) * 3 + 2])
+      b = vec3.fromValues(this.output[i * 3], this.output[i * 3 + 1], this.output[i * 3 + 2])
+    }
+    return this.interpolateValue(a, b, t, a.length)
+    //}
+    //}
   }
 
   //https://github.com/KhronosGroup/glTF-Tutorials/blob/main/gltfTutorial/gltfTutorial_007_Animations.md
   interpolateValue(a, b, t, dimensions) {
     switch (this.interpolation) {
       case "STEP":
-        return b
+        return a
       //case "CUBICSPLINE": //not implemented yet. TODO
       case "LINEAR":
         if (dimensions == 4) { //rotation -> quaternions
@@ -86,7 +164,7 @@ export class AnimationSampler {
         } else if (dimensions == 2) {
           const ba = vec2.subtract(vec2.create(), b, a)
           const t_ba = vec2.scale(vec2.create(), ba, t)
-          return vec3.add(vec3.create(), a, t_ba)
+          return vec2.add(vec2.create(), a, t_ba)
         } else {
           const ba = vec3.subtract(vec3.create(), b, a)
           const t_ba = vec3.scale(vec3.create(), ba, t)

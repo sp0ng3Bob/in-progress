@@ -30,9 +30,7 @@ export class Node {
 
     this.camera = options.camera ?? null
     this.mesh = options.mesh ?? null
-    //if (options.skin) {
-    //  this.skin = options.skin
-    //}
+
     this.skin = options.skin ?? null
 
     this.children = [...(options.children ?? [])]

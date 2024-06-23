@@ -202,7 +202,7 @@ export class Renderer {
       const bufferView = accessor.bufferView
       const attributeIndex = this.attributeNameToIndexMap[name]
 
-      if (attributeIndex !== undefined) {
+      if (attributeIndex !== undefined) { //https://stackoverflow.com/questions/50712696/when-to-release-a-vertex-array-object
         bufferView.target = gl.ARRAY_BUFFER
         const buffer = this.prepareBufferView(bufferView)
         gl.bindBuffer(bufferView.target, buffer)
@@ -262,12 +262,13 @@ export class Renderer {
 
     const program = this.programs.simple
     gl.useProgram(program.program)
-    gl.uniform1i(program.uniforms.uTexture, 0) // move out of here
+    gl.uniform1i(program.uniforms.uTexture, 0)
     gl.uniform1i(program.uniforms.uNormalTexture, 1)
     gl.uniform1i(program.uniforms.uEmissiveTexture, 2)
     gl.uniform1i(program.uniforms.uMetallicRoughnessTexture, 3)
-    gl.uniform1i(program.uniforms.uOcclusionTexture, 4) ////////////
+    gl.uniform1i(program.uniforms.uOcclusionTexture, 4)
 
+    gl.uniform1i(program.uniforms.uNumberOfLights, Object.keys(lights.lights).length)
     for (let l in lights.lights) { // move out of here
       gl.uniform3fv(program.uniforms[`uLightPositions[${l}]`], lights.lights[l].getPositionNormalised())
       gl.uniform3fv(program.uniforms[`uLightColors[${l}]`], lights.lights[l].getColorNormalised())
@@ -342,7 +343,12 @@ export class Renderer {
       gl.activeTexture(gl.TEXTURE0)
       gl.bindTexture(gl.TEXTURE_2D, glTexture)
       gl.bindSampler(0, glSampler)
+
+      gl.uniform1i(this.programs.simple.uniforms.uHasBaseColorTexture, 1)
+    } else {
+      gl.uniform1i(this.programs.simple.uniforms.uHasBaseColorTexture, 0)
     }
+
     if (material.normalTexture !== null) {
       texture = material.normalTexture
       glTexture = this.glObjects.get(texture.image)
@@ -354,7 +360,11 @@ export class Renderer {
       gl.bindSampler(1, glSampler)
 
       gl.uniform1f(this.programs.simple.uniforms.uNormalTextureScale, material.normalFactor)
+      gl.uniform1i(this.programs.simple.uniforms.uHasNormalTexture, 1)
+    } else {
+      gl.uniform1i(this.programs.simple.uniforms.uHasNormalTexture, 0)
     }
+
     if (material.emissiveTexture !== null) {
       texture = material.emissiveTexture
       glTexture = this.glObjects.get(texture.image)
@@ -366,7 +376,11 @@ export class Renderer {
       gl.bindSampler(2, glSampler)
 
       gl.uniform3fv(this.programs.simple.uniforms.uEmissiveFactor, material.emissiveFactor)
+      gl.uniform1i(this.programs.simple.uniforms.uHasEmissiveTexture, 1)
+    } else {
+      gl.uniform1i(this.programs.simple.uniforms.uHasEmissiveTexture, 0)
     }
+
     if (material.metallicRoughnessTexture !== null) {
       texture = material.metallicRoughnessTexture
       glTexture = this.glObjects.get(texture.image)
@@ -379,7 +393,11 @@ export class Renderer {
 
       gl.uniform1f(this.programs.simple.uniforms.uMetallicFactor, material.metallicFactor)
       gl.uniform1f(this.programs.simple.uniforms.uRoughnessFactor, material.roughnessFactor)
+      gl.uniform1i(this.programs.simple.uniforms.uHasMetallicRoughnessTexture, 1)
+    } else {
+      gl.uniform1i(this.programs.simple.uniforms.uHasMetallicRoughnessTexture, 0)
     }
+
     if (material.occlusionTexture !== null) {
       texture = material.occlusionTexture
       glTexture = this.glObjects.get(texture.image)
@@ -391,8 +409,12 @@ export class Renderer {
       gl.bindSampler(4, glSampler)
 
       gl.uniform1f(this.programs.simple.uniforms.uOcclusionStrength, material.occlusionFactor)
+      gl.uniform1i(this.programs.simple.uniforms.uHasOcclusionTexture, 1)
+    } else {
+      gl.uniform1i(this.programs.simple.uniforms.uHasOcclusionTexture, 0)
     }
 
+    //Drawing
     if (primitive.indices) {
       const mode = primitive.mode
       const count = primitive.indices.count

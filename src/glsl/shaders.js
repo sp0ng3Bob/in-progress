@@ -28,34 +28,43 @@ void main() {
 }
 `
 
+//https://registry.khronos.org/glTF/specs/2.0/glTF-2.0.html#appendix-b-brdf-implementation
 const fragment = `#version 300 es
 precision mediump float;
 precision mediump int;
 
 uniform sampler2D uTexture;
+uniform int uHasBaseColorTexture;
 
 uniform sampler2D uNormalTexture;
+uniform int uHasNormalTexture;
 uniform float uNormalTextureScale;
 
 uniform sampler2D uEmissiveTexture;
+uniform int uHasEmissiveTexture;
 uniform vec3 uEmissiveFactor;
 
 uniform sampler2D uMetallicRoughnessTexture;
+uniform int uHasMetallicRoughnessTexture;
 uniform float uMetallicFactor;
+uniform float uMetallic;
 uniform float uRoughnessFactor;
+uniform float uRoughness;
 
 uniform sampler2D uOcclusionTexture;
+uniform int uHasOcclusionTexture;
 uniform float uOcclusionStrength;
 
 // LIGHTS
-//uniform int uNumberOfLights;
-uniform vec3 uLightPositions[4]; //uNumberOfLights]
-uniform vec3 uLightColors[4]; //uNumberOfLights]
-uniform vec3 uDiffuseColor[4]; //= vec3(200, 200, 180)
-uniform vec3 uSpecularColor[4];  // Material specular color
-uniform vec3 uAmbientalColor[4];  // Material specular color
-uniform float uShininess[4];  // Material shininess
-uniform float uAttenuation[4];  // Material shininess
+#define MAX_LIGHTS 8
+uniform int uNumberOfLights;
+uniform vec3 uLightPositions[MAX_LIGHTS]; //uNumberOfLights]
+uniform vec3 uLightColors[MAX_LIGHTS]; //uNumberOfLights]
+uniform vec3 uDiffuseColor[MAX_LIGHTS]; //= vec3(200, 200, 180)
+uniform vec3 uSpecularColor[MAX_LIGHTS];  // Material specular color
+uniform vec3 uAmbientalColor[MAX_LIGHTS];  // Material ambient color
+uniform float uShininess[MAX_LIGHTS];  // Material shininess
+uniform float uAttenuation[MAX_LIGHTS];  // Material shininess
 
 in vec3 vNormal;
 in vec2 vTexCoord;
@@ -63,16 +72,103 @@ in vec4 vTangent;
 
 out vec4 oColor;
 
+// BRDF functions
+vec3 F_Schlick(float cosTheta, vec3 F0) {
+    return F0 + (1.0 - F0) * pow(1.0 - cosTheta, 5.0);
+}
+
+float DistributionGGX(vec3 N, vec3 H, float roughness) {
+    float a = roughness * roughness;
+    float a2 = a * a;
+    float NdotH = max(dot(N, H), 0.0);
+    float NdotH2 = NdotH * NdotH;
+
+    float nom = a2;
+    float denom = (NdotH2 * (a2 - 1.0) + 1.0);
+    denom = 3.14159265359 * denom * denom;
+
+    return nom / denom;
+}
+
+float GeometrySchlickGGX(float NdotV, float roughness) {
+    float r = (roughness + 1.0);
+    float k = (r * r) / 8.0;
+
+    float nom = NdotV;
+    float denom = NdotV * (1.0 - k) + k;
+
+    return nom / denom;
+}
+
+float GeometrySmith(vec3 N, vec3 V, vec3 L, float roughness) {
+    float NdotV = max(dot(N, V), 0.0);
+    float NdotL = max(dot(N, L), 0.0);
+    float ggx2 = GeometrySchlickGGX(NdotV, roughness);
+    float ggx1 = GeometrySchlickGGX(NdotL, roughness);
+
+    return ggx1 * ggx2;
+}
+// BRDF - end
+
 void main() {
+/*
+vec4 baseColor = hasBaseColorTexture == 1 ? texture(uBaseColorTexture, vTexCoord) * uBaseColor : uBaseColor;
+    vec3 albedo = baseColor.rgb;
+    float alpha = baseColor.a;
+
+    vec4 metallicRoughness = hasMetallicRoughnessTexture == 1 ? texture(uMetallicRoughnessTexture, vTexCoord) : vec4(uMetallic, uRoughness, 0.0, 0.0);
+    float metallic = metallicRoughness.b;
+    float roughness = metallicRoughness.g;
+*/
+/*
+//THIS!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    vec3 N = normalize(vNormal);
+    vec3 V = normalize(uCameraPosition - vPosition);
+    vec4 baseColor = texture(uBaseColorTexture, vTexCoord) * uBaseColor;
+    vec3 albedo = baseColor.rgb;
+    float alpha = baseColor.a;
+
+    vec4 metallicRoughness = texture(uMetallicRoughnessTexture, vTexCoord);
+    float metallic = metallicRoughness.b * uMetallic;
+    float roughness = metallicRoughness.g * uRoughness;
+
+    vec3 F0 = vec3(0.04);
+    F0 = mix(F0, albedo, metallic);
+
+    vec3 ambient = vec3(0.03) * albedo;
+    vec3 color = ambient;
+
+    for (int i = 0; i < 4; ++i) {
+        vec3 L = normalize(uLightPositions[i] - vPosition);
+        vec3 H = normalize(V + L);
+
+        vec3 F = F_Schlick(max(dot(H, V), 0.0), F0);
+        float D = DistributionGGX(N, H, roughness);
+        float G = GeometrySmith(N, V, L, roughness);
+
+        vec3 kS = F;
+        vec3 kD = vec3(1.0) - kS;
+        kD *= 1.0 - metallic;
+
+        float NdotL = max(dot(N, L), 0.0);
+
+        vec3 numerator = D * G * F;
+        float denominator = 4.0 * max(dot(N, V), 0.0) * NdotL + 0.001;
+        vec3 specular = numerator / denominator;
+
+        color += (kD * albedo / 3.14159265359 + specular) * NdotL * uLightColors[i];
+    }
+
+    fragColor = vec4(color, alpha);
+*/
+
   vec4 albedo = texture(uTexture, vTexCoord);
   vec3 normal = normalize(vNormal);
-  
-  
   
   // Lambertian reflection (diffuse reflection)
   vec3 diffuse = vec3(0.0);
   
-  for (int i = 0; i < 4; i++) {
+  for (int i = 0; i < uNumberOfLights; i++) {
     vec3 lightDir = normalize(uLightPositions[i] - vec3(vTexCoord, 0.0));
     float lambertian = max(dot(normal, lightDir), 0.0);
     diffuse += uLightColors[i] * uDiffuseColor[i] * lambertian;

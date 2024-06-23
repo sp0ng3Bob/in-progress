@@ -292,9 +292,9 @@ export class GLTFLoader {
         options.metallicRoughnessTexture = await this.loadTexture(pbr.metallicRoughnessTexture.index);
         options.metallicRoughnessTexCoord = pbr.metallicRoughnessTexture.texCoord;
       }
-      options.baseColorFactor = pbr.baseColorFactor;
-      options.metallicFactor = pbr.metallicFactor;
-      options.roughnessFactor = pbr.roughnessFactor;
+      options.baseColorFactor = pbr.baseColorFactor ?? [1, 1, 1, 1];
+      options.metallicFactor = pbr.metallicFactor ?? 1;
+      options.roughnessFactor = pbr.roughnessFactor ?? 1;
     }
 
     if (gltfSpec.normalTexture) {
@@ -314,10 +314,10 @@ export class GLTFLoader {
       options.emissiveTexCoord = gltfSpec.emissiveTexture.texCoord;
     }
 
-    options.emissiveFactor = gltfSpec.emissiveFactor;
-    options.alphaMode = gltfSpec.alphaMode;
-    options.alphaCutoff = gltfSpec.alphaCutoff;
-    options.doubleSided = gltfSpec.doubleSided;
+    options.emissiveFactor = gltfSpec.emissiveFactor ?? [0.0, 0.0, 0.0];
+    options.alphaMode = gltfSpec.alphaMode ?? "OPAQUE";
+    options.alphaCutoff = gltfSpec.alphaCutoff ?? 0.5;
+    options.doubleSided = gltfSpec.doubleSided ?? false;
     console.log("MATERIAL WHAAT??", gltfSpec, options)
 
     const material = new Material(options);

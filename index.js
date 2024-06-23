@@ -3,7 +3,8 @@ import { App } from "./glTFViewer.js"
 document.addEventListener("DOMContentLoaded", () => {
   const canvas = document.querySelector("#mainCanvas")
   const app = new App(canvas)
-  app.init()
+  const logs = document.querySelector(".Logs")
+  app.init(logs)
   let forAllCameras = true
 
   // Listeners
