@@ -292,9 +292,9 @@ export class GLTFLoader {
         options.metallicRoughnessTexture = await this.loadTexture(pbr.metallicRoughnessTexture.index);
         options.metallicRoughnessTexCoord = pbr.metallicRoughnessTexture.texCoord;
       }
-      options.baseColorFactor = pbr.baseColorFactor ?? [1, 1, 1, 1];
-      options.metallicFactor = pbr.metallicFactor ?? 1;
-      options.roughnessFactor = pbr.roughnessFactor ?? 1;
+      options.baseColorFactor = pbr.baseColorFactor ?? [1.0, 1.0, 1.0, 1.0];
+      options.metallicFactor = pbr.metallicFactor ?? 0.5 //1;
+      options.roughnessFactor = pbr.roughnessFactor ?? 0.5 //1;
     }
 
     if (gltfSpec.normalTexture) {

@@ -38,7 +38,7 @@ html {
   left: 1em;
 }
 
-/* Class bg colors */
+/* Class for bg colors */
 .green {
   background-color: darkgreen !important;
 }
@@ -53,4 +53,9 @@ html {
 
 .blue {
   background-color: darkblue !important;
+}
+
+/* Class for centering action */
+li.cr.function.centered {
+  text-align: center;
 }

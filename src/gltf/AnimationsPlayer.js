@@ -17,7 +17,7 @@ export class AnimationsPlayer {
     this.animationsToPlay.clear()
     this.animationsCount = this.animations.length
     this.animationsDuration = this.animations.reduce((max, anim) => {
-      return Math.max(max, anim.duration);
+      return Math.max(max, anim.duration * anim.maxCycles);
     }, 0)
   }
 
@@ -58,7 +58,7 @@ export class AnimationsPlayer {
     //const elapsed = (currentTime - this.startTime) / 1000
 
     for (const animationIndex of this.animationsToPlay.keys()) {
-      this.animations[animationIndex].update(this.currentTime) //(elapsed)
+      this.animations[animationIndex].update(this.getCurrentTime()) //(elapsed)
     }
 
     this.currentTime += deltaTime

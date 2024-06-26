@@ -10,7 +10,7 @@ export class Material {
     this.baseColorTexCoord = options.baseColorTexCoord ?? 0
     this.baseColorFactor = options.baseColorFactor
       ? vec4.clone(options.baseColorFactor)
-      : vec4.fromValues(1, 1, 1, 1)
+      : vec4.fromValues(1.0, 1.0, 1.0, 1.0)
 
     this.metallicRoughnessTexture = options.metallicRoughnessTexture ?? null
     this.metallicRoughnessTexCoord = options.metallicRoughnessTexCoord ?? 0

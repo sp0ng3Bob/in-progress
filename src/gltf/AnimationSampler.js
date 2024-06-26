@@ -9,9 +9,12 @@ export class AnimationSampler {
   constructor(options = {}) {
     this.path = options.path
     this.input = this.getAccessorData(options.input)
+    this.inputNormalized = null
     this.output = this.getAccessorData(options.output)
     this.interpolation = options.interpolation ?? 'LINEAR'
     this.cycleFinished = false
+    this.cycles = 1
+    //this.atInputIndex = 0
   }
 
   getAccessorData(accessor) {
@@ -92,7 +95,7 @@ export class AnimationSampler {
     //for (let i = 1; i < this.input.length; i++) {
     //  if (time < this.input[i]) {
 
-    if (this.cycleFinished) {
+    /*if (this.cycleFinished) {
       if (this.path == "rotation") {
         b = quat.fromValues(this.output.at(-4), this.output.at(-3), this.output.at(-2), this.output.at(-1))
       } else if (this.path == "weights") {
@@ -101,13 +104,14 @@ export class AnimationSampler {
         b = vec3.fromValues(this.output.at(-3), this.output.at(-2), this.output.at(-1))
       }
       return b
-    }
+    }*/
 
     /*if (i === this.input.length - 1) {
       this.cycleFinished = true
     }*/
 
-    const t = (time - this.input[i - 1]) / (this.input[i] - this.input[i - 1])
+    //const t = (time - this.input[i - 1]) / (this.input[i] - this.input[i - 1])
+    const t = (time - this.inputNormalized[i - 1]) / (this.inputNormalized[i] - this.inputNormalized[i - 1])
     //let a, b
     if (this.path == "rotation") {
       a = quat.fromValues(this.output[(i - 1) * 4], this.output[(i - 1) * 4 + 1], this.output[(i - 1) * 4 + 2], this.output[(i - 1) * 4 + 3])
@@ -119,7 +123,9 @@ export class AnimationSampler {
       a = vec3.fromValues(this.output[(i - 1) * 3], this.output[(i - 1) * 3 + 1], this.output[(i - 1) * 3 + 2])
       b = vec3.fromValues(this.output[i * 3], this.output[i * 3 + 1], this.output[i * 3 + 2])
     }
-    return this.interpolateValue(a, b, t, a.length)
+    //console.log(time, i - 1, this.inputNormalized[i - 1], a, b)
+    //return this.interpolateValue(b, a, t, a.length) //!!!!!! a, b, t, a.length -- but it kinda works.
+    return this.interpolateValue(a, b, t, a.length) //!!!!!! a, b, t, a.length -- but it kinda works.
     //}
     //}
   }

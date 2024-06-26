@@ -163,6 +163,14 @@ export class Renderer {
   }
 
   prepareMaterial(material) {
+    /*const program = this.programs.simple
+    this.gl.useProgram(program.program)
+    this.gl.uniform1i(program.uniforms.uTexture, 0)
+    this.gl.uniform1i(program.uniforms.uNormalTexture, 1)
+    this.gl.uniform1i(program.uniforms.uEmissiveTexture, 2)
+    this.gl.uniform1i(program.uniforms.uMetallicRoughnessTexture, 3)
+    this.gl.uniform1i(program.uniforms.uOcclusionTexture, 4)*/
+
     if (material.baseColorTexture) {
       this.prepareTexture(material.baseColorTexture)
     }
@@ -242,6 +250,21 @@ export class Renderer {
       this.prepareNode(node)
     }
   }
+
+  /*prepareLights(lights) {
+    const program = this.programs.simple
+    this.gl.useProgram(program.program)
+    this.gl.uniform1i(program.uniforms.uNumberOfLights, Object.keys(lights.lights).length)
+    for (let l in lights.lights) { // move out of here
+      this.gl.uniform3fv(program.uniforms[`uLightPositions[${l}]`], lights.lights[l].getPositionNormalised())
+      this.gl.uniform3fv(program.uniforms[`uLightColors[${l}]`], lights.lights[l].getColorNormalised())
+      this.gl.uniform3fv(program.uniforms[`uDiffuseColor[${l}]`], lights.lights[l].getDiffuseColorNormalised())
+      this.gl.uniform3fv(program.uniforms[`uSpecularColor[${l}]`], lights.lights[l].getSpecularColorNormalised())
+      this.gl.uniform3fv(program.uniforms[`uAmbientalColor[${l}]`], lights.lights[l].getAmbientalColorNormalised())
+      this.gl.uniform1f(program.uniforms[`uShininess[${l}]`], lights.lights[l].shininess)
+      this.gl.uniform1f(program.uniforms[`uAttenuation[${l}]`], lights.lights[l].attenuation)
+    }
+  }*/
 
   getViewProjectionMatrix(camera) {
     const vpMatrix = mat4.clone(camera.matrix)
@@ -334,6 +357,10 @@ export class Renderer {
     let glTexture
     let glSampler
 
+    gl.uniform4fv(this.programs.simple.uniforms.uBaseColor, material.baseColorFactor)
+    gl.uniform1f(this.programs.simple.uniforms.uMetallicFactor, material.metallicFactor)
+    gl.uniform1f(this.programs.simple.uniforms.uRoughnessFactor, material.roughnessFactor)
+
     if (material.baseColorTexture !== null) {
       texture = material.baseColorTexture
       glTexture = this.glObjects.get(texture.image)
@@ -391,8 +418,6 @@ export class Renderer {
       gl.bindTexture(gl.TEXTURE_2D, glTexture)
       gl.bindSampler(3, glSampler)
 
-      gl.uniform1f(this.programs.simple.uniforms.uMetallicFactor, material.metallicFactor)
-      gl.uniform1f(this.programs.simple.uniforms.uRoughnessFactor, material.roughnessFactor)
       gl.uniform1i(this.programs.simple.uniforms.uHasMetallicRoughnessTexture, 1)
     } else {
       gl.uniform1i(this.programs.simple.uniforms.uHasMetallicRoughnessTexture, 0)

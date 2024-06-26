@@ -30,7 +30,7 @@ const m101 = "./src/models/1Avocado/glTF-Binary/Avocado.glb"
 const m2 = "./src/models/2Helmet/FlightHelmet.gltf"
 const m3 = "./src/models/3Boombox/BoomBox.gltf"
 const m4 = "./src/models/4PBR/Box With Spaces.gltf"
-const m5 = "./src/models/5Animated/AnimatedCube.gltf"
+const m5 = "./src/models/5Animated/AnimatedCube-EMB.gltf"
 const m6 = "./src/models/6Skins/RiggedSimple.gltf" //also this... (GL_INVALID_OPERATION: Must have element array buffer bound.)
 const m7 = "./src/models/7Alpha/AlphaBlendModeTest.gltf"
 const m8 = "./src/models/8AnimateMorph/AnimatedMorphCube.gltf"
@@ -110,13 +110,12 @@ export class App extends Application {
     this.frameCount = 1
     this.animationTimeLogs = logsDOMElement.querySelector("#animationTime")
 
-    this.initGUI()
-
     // User Controls
     this.controls = new Controls()
     this.freeCamera = 0
 
     // Lights
+    this.lightsNumberLimit = 8
     this.state.lightsList.push(new PointLight({ position: "-0.6, 0.1, 0", color: [255, 120, 120], type: "" }))
     this.state.lightsList.push(new PointLight({ position: "-0.3, 0.1, 0", color: [100, 255, 100], type: "" }))
     this.state.lightsList.push(new PointLight({ position: "+0.3, 0.1, 0", color: [127, 127, 255], type: "" }))
@@ -126,6 +125,8 @@ export class App extends Application {
     //**/!*/!*!/*!/*!/*!/*!/!*/!*/!*/!*/!*/!*/!*!/*!/**!/!*/!*/*!/*!/*!*!/*!/*!/*!/*!/*/!*/!*/!*/!************?**?*??
     this.cameraTheta = 0.0   // Initial angle in the XY plane
     this.cameraPhi = Math.PI / 2
+
+    this.initGUI()
   }
 
   initGUI() {
@@ -190,8 +191,12 @@ export class App extends Application {
     addLightFolder.addColor(this.state, "addLightColor") // color,
     addLightFolder.add(this.state, "addLightIntensity") // intensity
     addLightFolder.add(this.state, "addLightAttenuation", lightAttenuationList) // attenuation (constant, linear, quadratic attenuation)
-    addLightFolder.add(this, "addPointLight").name("ADD POINT LIGHT")
+    const addPointLightAction = addLightFolder.add(this, "addPointLight").name("ADD POINT LIGHT")
+    addPointLightAction.__li.classList.add("centered")
     this.lightsListFolder = this.lightFolder.addFolder("List of added lights")
+    for (const light of this.state.lightsList) {
+      this.lightsListFolder.addColor(light, "color").listen()
+    }
     //this.lightFolder.domElement.style.display = "none"
 
     // Shaders
@@ -218,16 +223,20 @@ export class App extends Application {
     this.geometryFolder.domElement.children[0].children[0].classList.add("blue")
 
     let planeFolder = this.geometryFolder.addFolder("Plane")
-    planeFolder.add(this, "addGeoPlane").name("ADD PLANE TO SCENE")
+    const addPlaneAction = planeFolder.add(this, "addGeoPlane").name("ADD PLANE TO SCENE")
+    addPlaneAction.__li.classList.add("centered")
 
     let cubeFolder = this.geometryFolder.addFolder("Cube")
-    cubeFolder.add(this, "addGeoCube").name("ADD CUBE TO SCENE")
+    const addCubeAction = cubeFolder.add(this, "addGeoCube").name("ADD CUBE TO SCENE")
+    addCubeAction.__li.classList.add("centered")
 
     let sphereFolder = this.geometryFolder.addFolder("Sphere")
-    sphereFolder.add(this, "addGeoSphere").name("ADD SPHERE TO SCENE")
+    const addSphereAction = sphereFolder.add(this, "addGeoSphere").name("ADD SPHERE TO SCENE")
+    addSphereAction.__li.classList.add("centered")
 
     let torusFolder = this.geometryFolder.addFolder("Torus")
-    torusFolder.add(this, "addGeoTorus").name("ADD TORUS TO SCENE")
+    const addTorusAction = torusFolder.add(this, "addGeoTorus").name("ADD TORUS TO SCENE")
+    addTorusAction.__li.classList.add("centered")
 
     let geomListFolder = this.geometryFolder.addFolder("List of added geometries")
     //this.geometryFolder.domElement.style.display = "none"
@@ -258,7 +267,7 @@ export class App extends Application {
     globalTextureFolder.add(this.state, "wrappingModeS", wrappingList).listen().onChange(this.changeWrappingS.bind(this))
     globalTextureFolder.add(this.state, "wrappingModeT", wrappingList).listen().onChange(this.changeWrappingT.bind(this))
     globalTextureFolder.add(this.state, "mipMaps").listen().onChange(this.changeMips.bind(this))
-    globalTextureFolder.add(this.state, "minFilterMode", filteringList).listen().onChange(this.changeFilteringMin.bind(this))
+    globalTextureFolder.add(this.state, "minFilterMode", { ...filteringList, ...mipmapsList }).listen().onChange(this.changeFilteringMin.bind(this))
     globalTextureFolder.add(this.state, "magFilterMode", { ...filteringList, ...mipmapsList }).listen().onChange(this.changeFilteringMag.bind(this))
     //this.globalFolder.domElement.style.display = "none"
   }
@@ -312,12 +321,12 @@ export class App extends Application {
     }
 
     // Globals
-    this.state.wrappingModeS = 33071
-    this.state.wrappingModeT = 33071
-    this.state.mipMaps = false
-    this.state.minFilterMode = 9729
-    this.state.magFilterMode = 9729
-    this.globalFolder.domElement.style.display = ""
+    //this.state.wrappingModeS = 33071
+    //this.state.wrappingModeT = 33071
+    //this.state.mipMaps = false
+    //this.state.minFilterMode = 9729
+    //this.state.magFilterMode = 9729
+    //this.globalFolder.domElement.style.display = ""
 
     // this.morphCtrls.forEach((ctrl) => ctrl.remove())
     // this.morphCtrls.length = 0
@@ -342,33 +351,6 @@ export class App extends Application {
       })
     }*/
 
-    /*if (this.clips?.length) {
-      this.animFolder.domElement.style.display = ""
-      const actionStates = this.state.actionStates = {}
-      this.clips.forEach((clip, clipIndex) => {
-        clip.name = `${clipIndex + 1}. ${clip.name ?? "animation"}`
-
-        // Autoplay the first clip.
-        let action
-        if (clipIndex === 0) {
-          actionStates[clip.name] = true
-          action = this.mixer.clipAction(clip)
-          action.play()
-        } else {
-          actionStates[clip.name] = false
-        }
-
-        // Play other clips when enabled.
-        const ctrl = this.animFolder.add(actionStates, clip.name).listen()
-        ctrl.onChange((playAnimation) => {
-          action = action || this.mixer.clipAction(clip)
-          action.setEffectiveTimeScale(1)
-          playAnimation ? action.play() : action.stop()
-        })
-        this.animCtrls.push(ctrl)
-        this.animFolder.add(clip, "name")
-      })
-    }*/
 
     //Lights
     /*for (let lightIndex in this.state.lightsList) {
@@ -471,16 +453,18 @@ export class App extends Application {
   //****************************************************************************************************************
 
   async changeModel(id) {
+    if (this.animationsPlayer.isPlaying) {
+      this.stopAnimations()
+    }
+
     model = id
-    await this.setSceneAndCamera()
+    await this.loadSceneAndCamera()
     //**/!*/!*!/*!/*!/*!/*!/!*/!*/!*/!*/!*/!*/!*!/*!/**!/!*/!*/*!/*!/*!*!/*!/*!/*!/*!/*/!*/!*/!*/!***********
     this.cameraRadius = this.camera.translation[2]  // Initial radius of the camera from the lookAt point
 
     this.renderer.prepareScene(this.scene)
 
-    if (this.animationsPlayer.isPlaying) {
-      this.stopAnimations()
-    }
+    this.setTextureStuff(this.scene.nodes)
 
     if (this.scene.animations) {
       (Object.keys(this.state.animationsList) ?? []).forEach(key => delete this.state.animationsList[key])
@@ -494,6 +478,27 @@ export class App extends Application {
     }
 
     this.updateGUI()
+  }
+
+  setTextureStuff(nodes) {
+    //this.scene.nodes[0].mesh.primitives[0].material.baseColorTexture.sampler
+    nodes.forEach(node => {
+      if (node.mesh) {
+        node.mesh.primitives.forEach(primitive => {
+          if (primitive?.material?.baseColorTexture) {
+            this.state.wrappingModeS = primitive.material.baseColorTexture.sampler.wrapS
+            this.state.wrappingModeT = primitive.material.baseColorTexture.sampler.wrapT
+            this.state.mipMaps = primitive.material.baseColorTexture.hasMipmaps
+            this.state.minFilterMode = primitive.material.baseColorTexture.sampler.min
+            this.state.magFilterMode = primitive.material.baseColorTexture.sampler.mag
+            return
+          }
+        })
+      }
+      if (node.children.length > 0) {
+        this.setTextureStuff(node.children)
+      }
+    })
   }
 
   playAnimations() {
@@ -516,7 +521,7 @@ export class App extends Application {
     this.animationsPlayer.toggleAnimationToPlaylist(animationIndex)
   }
 
-  async setSceneAndCamera() {
+  async loadSceneAndCamera() {
     if (this.state.selectedModel != "") {
       await this.loader.load(model)
       this.extractPosIndBB(this.loader.defaultScene)

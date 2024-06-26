@@ -41,6 +41,9 @@ export class Node {
   }
 
   updateMatrix() {
+    /*for (const childNode of this.children ?? []) {
+      childNode.updateMatrix()
+    }*/
     mat4.fromRotationTranslationScale(
       this.matrix,
       this.rotation,
