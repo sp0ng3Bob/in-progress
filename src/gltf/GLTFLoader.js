@@ -214,11 +214,52 @@ export class GLTFLoader {
       MAT4: 16,
     };
 
-    const accessor = new Accessor({
+    const typedArrayConstructor = {
+      5120: Int8Array,
+      5121: Uint8Array,
+      5122: Int16Array,
+      5123: Uint16Array,
+      5125: Uint32Array,
+      5126: Float32Array
+    }
+
+    let accessor
+    let bufferView
+    const type = accessorTypeToNumComponentsMap[gltfSpec.type]
+    const byteLength = gltfSpec.count * type
+    if (gltfSpec.sparse) {
+      const { count, values, indices } = gltfSpec.sparse;
+
+      const valuesAccessor = await this.loadBufferView(values.bufferView) //(this.accessors[values.accessor]);
+      const indicesAccessor = await this.loadBufferView(indices.bufferView) //this.parseAccessor(this.accessors[indices.accessor]);
+
+      const ValuesArray = typedArrayConstructor[gltfSpec.componentType]
+      const sparseData = new ValuesArray(byteLength)
+
+      const IndicesArray = typedArrayConstructor[indices.componentType]
+      const indicesData = new IndicesArray(indicesAccessor.buffer, indicesAccessor.byteOffset, indicesAccessor.byteLength / IndicesArray.BYTES_PER_ELEMENT)
+      const valuesData = new ValuesArray(valuesAccessor.buffer, valuesAccessor.byteOffset, valuesAccessor.byteLength / ValuesArray.BYTES_PER_ELEMENT)
+      for (let i = 0; i < count; i++) { //indicesData.length; i++) {
+        const index = indicesData[i]
+        const value = valuesData.subarray(i * type, (i + 1) * type)
+        sparseData.set(value, index * type)
+      }
+
+      //bufferView = await this.loadBufferView(gltfSpec.bufferView)
+      bufferView = new BufferView({
+        buffer: sparseData.buffer,
+        byteLength: byteLength //sparseData.byteLength //ValuesArray.BYTES_PER_ELEMENT //gltfSpec.count //gltfSpec.byteLength //type //sparseData.buffer.byteLength
+      })
+    } else {
+      bufferView = await this.loadBufferView(gltfSpec.bufferView)
+    }
+
+    accessor = new Accessor({
       ...gltfSpec,
-      bufferView: await this.loadBufferView(gltfSpec.bufferView),
-      numComponents: accessorTypeToNumComponentsMap[gltfSpec.type],
+      bufferView,
+      numComponents: type,
     });
+
     this.cache.set(gltfSpec, accessor);
     return accessor;
   }

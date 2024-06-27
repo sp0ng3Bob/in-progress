@@ -200,7 +200,11 @@ export class Renderer {
     gl.bindVertexArray(vao)
     if (primitive.indices) {
       const bufferView = primitive.indices.bufferView
-      bufferView.target = gl.ELEMENT_ARRAY_BUFFER
+
+      if (!bufferView.target) {
+        bufferView.target = gl.ELEMENT_ARRAY_BUFFER
+      }
+
       const buffer = this.prepareBufferView(bufferView)
       gl.bindBuffer(bufferView.target, buffer)
     }
@@ -211,7 +215,10 @@ export class Renderer {
       const attributeIndex = this.attributeNameToIndexMap[name]
 
       if (attributeIndex !== undefined) { //https://stackoverflow.com/questions/50712696/when-to-release-a-vertex-array-object
-        bufferView.target = gl.ARRAY_BUFFER
+        if (!bufferView.target) {
+          bufferView.target = gl.ARRAY_BUFFER
+        }
+
         const buffer = this.prepareBufferView(bufferView)
         gl.bindBuffer(bufferView.target, buffer)
         gl.enableVertexAttribArray(attributeIndex)
