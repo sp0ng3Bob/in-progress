@@ -9,16 +9,16 @@ export class AnimationSampler {
   constructor(options = {}) {
     this.path = options.path
     this.input = this.getAccessorData(options.input)
-    this.inputNormalized = null
+    //this.inputNormalized = null
     this.output = this.getAccessorData(options.output)
     this.interpolation = options.interpolation ?? 'LINEAR'
-    this.cycleFinished = false
-    this.cycles = 1
+    //this.cycleFinished = false
+    //this.cycles = 1
     //this.atInputIndex = 0
   }
 
   getAccessorData(accessor) {
-    return new Float32Array(accessor.bufferView.buffer, accessor.bufferView.byteOffset, accessor.count * accessor.numComponents)
+    return new Float32Array(accessor.bufferView.buffer, accessor.bufferView.byteOffset + accessor.byteOffset, accessor.count * accessor.numComponents)
   }
 
   getStartingPosition() {
@@ -110,8 +110,8 @@ export class AnimationSampler {
       this.cycleFinished = true
     }*/
 
-    //const t = (time - this.input[i - 1]) / (this.input[i] - this.input[i - 1])
-    const t = (time - this.inputNormalized[i - 1]) / (this.inputNormalized[i] - this.inputNormalized[i - 1])
+    const t = (time - this.input[i - 1]) / (this.input[i] - this.input[i - 1])
+    //const t = (time - this.inputNormalized[i - 1]) / (this.inputNormalized[i] - this.inputNormalized[i - 1])
     //let a, b
     if (this.path == "rotation") {
       a = quat.fromValues(this.output[(i - 1) * 4], this.output[(i - 1) * 4 + 1], this.output[(i - 1) * 4 + 2], this.output[(i - 1) * 4 + 3])
@@ -125,7 +125,7 @@ export class AnimationSampler {
     }
     //console.log(time, i - 1, this.inputNormalized[i - 1], a, b)
     //return this.interpolateValue(b, a, t, a.length) //!!!!!! a, b, t, a.length -- but it kinda works.
-    return this.interpolateValue(a, b, t, a.length) //!!!!!! a, b, t, a.length -- but it kinda works.
+    return this.interpolateValue(a, b, t, a.length)
     //}
     //}
   }

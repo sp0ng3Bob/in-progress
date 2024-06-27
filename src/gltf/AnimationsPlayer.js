@@ -17,7 +17,8 @@ export class AnimationsPlayer {
     this.animationsToPlay.clear()
     this.animationsCount = this.animations.length
     this.animationsDuration = this.animations.reduce((max, anim) => {
-      return Math.max(max, anim.duration * anim.maxCycles);
+      return Math.max(max, anim.duration)
+      //return Math.max(max, anim.duration * anim.maxCycles);
     }, 0)
   }
 
@@ -35,6 +36,7 @@ export class AnimationsPlayer {
 
   play() {
     this.isPlaying = true
+    this.isPaused = false
     //this.startTime = performance.now();
     //requestAnimationFrame(this.update.bind(this));
   }

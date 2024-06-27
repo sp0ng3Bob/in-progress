@@ -9,8 +9,10 @@ export class Animation {
 
     /* WITH NORMALIZED INPUT */
     this.duration = this.calculateAnimationDuration()
-    this.maxCycles = this.getCycles()
-    this.normalizeInput()
+    //this.maxCycles = this.getCycles()
+    //this.normalizeInput()
+
+    //this.reset()
   }
 
   normalizeInput() {
@@ -91,12 +93,15 @@ export class Animation {
 
   update(deltaTime) { //, animationsDuration) {
     //deltaTime %= animationsDuration //this.duration
+    deltaTime %= this.duration
 
     this.channels.forEach(channel => {
       if (channel.target.node) {
         //for (let i = channel.sampler.atInputIndex; i < channel.sampler.inputNormalized.length; i++) {
-        for (let i = 1; i < channel.sampler.inputNormalized.length; i++) {
-          if (deltaTime >= channel.sampler.inputNormalized[i - 1] && deltaTime <= channel.sampler.inputNormalized[i]) {
+        for (let i = 1; i < channel.sampler.input.length; i++) {
+          //for (let i = 1; i < channel.sampler.inputNormalized.length; i++) {
+          if (deltaTime > channel.sampler.input[i - 1] && deltaTime < channel.sampler.input[i]) {
+            //if (deltaTime >= channel.sampler.inputNormalized[i - 1] && deltaTime <= channel.sampler.inputNormalized[i]) {
             const value = channel.sampler.interpolate(deltaTime, i) //deltaTime, this.duration, i
             this.updateNodeValue(channel, value)
 

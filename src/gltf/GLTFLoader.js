@@ -293,8 +293,8 @@ export class GLTFLoader {
         options.metallicRoughnessTexCoord = pbr.metallicRoughnessTexture.texCoord;
       }
       options.baseColorFactor = pbr.baseColorFactor ?? [1.0, 1.0, 1.0, 1.0];
-      options.metallicFactor = pbr.metallicFactor ?? 0.5 //1;
-      options.roughnessFactor = pbr.roughnessFactor ?? 0.5 //1;
+      options.metallicFactor = pbr.metallicFactor ?? 1.0;
+      options.roughnessFactor = pbr.roughnessFactor ?? 1.0;
     }
 
     if (gltfSpec.normalTexture) {
@@ -331,7 +331,7 @@ export class GLTFLoader {
       return this.cache.get(gltfSpec);
     }
 
-    const options = { primitives: [], weights: [] };
+    const options = { primitives: [] } //, weights: [] };
     for (const primitiveSpec of gltfSpec.primitives) {
       const primitiveOptions = { targets: {} };
       primitiveOptions.attributes = {};
