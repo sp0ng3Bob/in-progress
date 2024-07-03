@@ -2,52 +2,87 @@
 //import { Node } from "./Node.js"
 import glMatrix from "glMatrix"
 
+const mat4 = glMatrix.mat4
 const vec4 = glMatrix.vec4
 export class Skin {
 
   constructor(options = {}) {
     this.name = options.name ?? ""
     this.skeleton = options.skeleton ?? null //new Node({})
-    this.joints = options.joints ?? []
-    this.inverseBindMatrices = options.inverseBindMatrices ?? null //new Accessor({})
+    this.joints = options.joints
+    this.inverseBindMatrices = this.setInverseMatrices(options.inverseBindMatrices) // ?? mat4.create() //new Accessor({})
+    //this.jointMatrices = new Float32Array(16 * this.joints.length)
   }
-  /*constructor(gltf, skin) {
-      this.joints = skin.joints
-      this.inverseBindMatrices = null
 
-      if (skin.inverseBindMatrices !== undefined) {
-          this.inverseBindMatrices = this._getInverseBindMatrices(gltf, skin.inverseBindMatrices)
+  setInverseMatrices(inverseBindMatricesBuffer) {
+    let ibm = []
+
+    for (let i in this.joints) { //can be undefined .. use the identity
+      i = Number(i)
+
+      if (inverseBindMatricesBuffer) {
+        ibm[i] = new Float32Array(
+          inverseBindMatricesBuffer.bufferView.buffer,
+          inverseBindMatricesBuffer.byteOffset + inverseBindMatricesBuffer.bufferView.byteOffset + 16 * 4 * i,
+          16
+        )
+      } else {
+        ibm[i] = mat4.identity(mat4.create())
       }
+    }
+
+    return ibm
   }
 
-  _getInverseBindMatrices(gltf, accessorIndex) {
-      const accessor = gltf.accessors[accessorIndex]
-      const bufferView = gltf.bufferViews[accessor.bufferView]
-      const buffer = gltf.buffers[bufferView.buffer]
+  updateJointMatrices(i) {
+    const jointMatrix = mat4.identity(mat4.create())
+    const joint = this.joints[i]
+    const worldInverse = mat4.invert(mat4.create(), joint.matrix)
 
-      const byteOffset = accessor.byteOffset + (bufferView.byteOffset ?? 0)
-      const byteStride = accessor.byteStride ?? 16 * Float32Array.BYTES_PER_ELEMENT
+    mat4.mul(jointMatrix, joint.matrix, this.inverseBindMatrices[i])
+    //mat4.mul(jointMatrix, worldInverse, this.inverseBindMatrices[i])
 
-      const arrayBuffer = buffer.data.slice(byteOffset, byteOffset + accessor.count * byteStride)
-      return new Float32Array(arrayBuffer)
+    //mat4.mul(jointMatrix, worldInverse, jointMatrix)
+
+    joint.children.forEach(childNode => {
+      const tmpMat = mat4.identity(mat4.create())
+      mat4.mul(tmpMat, joint.matrix, childNode.matrix)
+      //mat4.mul(tmpMat, worldInverse, childNode.matrix)
+
+      mat4.mul(tmpMat, tmpMat, this.inverseBindMatrices[i])
+      mat4.mul(jointMatrix, jointMatrix, tmpMat)
+    })
+
+    return jointMatrix
   }
 
-  applyJointTransforms(nodeTransforms) {
-      const jointMatrices = []
+  /*updateJointMatrices(i) {
+    //for (let i = 0; i < this.joints.length; ++i) {
+    const jointMatrix = this.jointMatrices.subarray(i * 16, (i + 1) * 16);
+    const joint = this.joints[i];
+    // Get the joint's world transform
+    const worldTransform = joint.matrix;
 
-      for (let i = 0; i < this.joints.length; i++) {
-          const jointNode = this.joints[i]
-          const jointMatrix = mat4.create()
-
-          if (this.inverseBindMatrices) {
-              mat4.multiply(jointMatrix, nodeTransforms[jointNode], this.inverseBindMatrices.subarray(i * 16, (i + 1) * 16))
-          } else {
-              mat4.copy(jointMatrix, nodeTransforms[jointNode])
-          }
-
-          jointMatrices.push(jointMatrix)
-      }
-
-      return jointMatrices
+    //const inverseBindMatrix = new Float32Array(16);
+    const inverseBindMatrix = new Float32Array(
+      this.inverseBindMatrices.bufferView.buffer,
+      this.inverseBindMatrices.byteOffset + this.inverseBindMatrices.bufferView.byteOffset + 16 * 4 * i,
+      16
+    )
+    // Fetch the inverse bind matrix for this joint
+    //this.gltf.getMatrixFromAccessor(this.inverseBindMatrices, i, inverseBindMatrix);
+    // Multiply world transform with the inverse bind matrix
+    mat4.multiply(jointMatrix, worldTransform, inverseBindMatrix);
+    return jointMatrix
+    //}
   }*/
+
+  /*getJointMatrix(index) {
+    return this.jointMatrices.subarray(index * 16, (index + 1) * 16)
+  }*/
+
+  /*setUniforms(gl, program) {
+    gl.uniformMatrix4fv(program.uniforms["JointMatrix.matrix"], false, this.jointMatrices);
+  }*/
+
 }

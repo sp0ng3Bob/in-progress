@@ -37,8 +37,6 @@ export class AnimationsPlayer {
   play() {
     this.isPlaying = true
     this.isPaused = false
-    //this.startTime = performance.now();
-    //requestAnimationFrame(this.update.bind(this));
   }
 
   pause() {
@@ -54,18 +52,13 @@ export class AnimationsPlayer {
   }
 
   update(deltaTime) {
-    //if (!this.isPlaying || !this.currentAnimation) return
     if (!this.isPlaying) return
 
-    //const elapsed = (currentTime - this.startTime) / 1000
-
     for (const animationIndex of this.animationsToPlay.keys()) {
-      this.animations[animationIndex].update(this.getCurrentTime()) //(elapsed)
+      this.animations[animationIndex].update(this.currentTime) //this.getCurrentTime())
     }
 
     this.currentTime += deltaTime
-
-    //requestAnimationFrame(this.update.bind(this));
   }
 
   resetPositions() {

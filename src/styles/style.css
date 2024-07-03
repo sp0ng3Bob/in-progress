@@ -59,3 +59,10 @@ html {
 li.cr.function.centered {
   text-align: center;
 }
+
+/* Disable dat.GUI */
+.disabled {
+  pointer-events: none;
+  user-select: none;
+  opacity: 0.7;
+}

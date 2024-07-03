@@ -40,6 +40,11 @@ export class Renderer {
       WEIGHTS_1: 6,
       TANGENT: 7
     }
+    this.morphAttributeNameToIndexMap = {
+      POSITION: 8,
+      NORMAL: 10,
+      TANGENT: 12
+    }
   }
 
   changeClearColor(color) {
@@ -232,6 +237,33 @@ export class Renderer {
       }
     }
 
+    for (let target in primitive.targets) {
+      if (Number(target) < 2) {
+        for (let name in primitive.targets[target]) {
+          const accessor = primitive.targets[target][name]
+          const bufferView = accessor.bufferView
+          const attributeIndex = this.morphAttributeNameToIndexMap[name]
+
+          if (attributeIndex !== undefined) {
+            if (!bufferView.target) {
+              bufferView.target = gl.ARRAY_BUFFER
+            }
+
+            const buffer = this.prepareBufferView(bufferView)
+            gl.bindBuffer(bufferView.target, buffer)
+            gl.enableVertexAttribArray(attributeIndex)
+            gl.vertexAttribPointer(
+              attributeIndex,
+              accessor.numComponents,
+              accessor.componentType,
+              accessor.normalized,
+              bufferView.byteStride,
+              accessor.byteOffset)
+          }
+        }
+      }
+    }
+
     this.glObjects.set(primitive, vao)
     //gl.bindBuffer(gl.ARRAY_BUFFER, null)
     return vao
@@ -341,9 +373,32 @@ export class Renderer {
     mvpMatrix = mat4.clone(mvpMatrix)
     mat4.mul(mvpMatrix, mvpMatrix, node.matrix)
 
+    const program = this.programs.simple
+
+    if (node.skin) {
+      //node.skin.updateJointMatrices()
+      for (const i in node.skin.joints) {
+        //gl.uniformMatrix4fv(program.uniforms.u_jointMatrix[i], false, node.skin.getJointMatrix(Number(i)))
+        gl.uniformMatrix4fv(program.uniforms[`u_jointMatrix[${i}]`], false, node.skin.updateJointMatrices(Number(i)))
+      }
+      gl.uniform1i(program.uniforms.hasSkinning, 1)
+    } else {
+      gl.uniform1i(program.uniforms.hasSkinning, 0)
+    }
+
     if (node.mesh) {
-      const program = this.programs.simple
+      //const program = this.programs.simple
       gl.uniformMatrix4fv(program.uniforms.uMvpMatrix, false, mvpMatrix)
+
+      let w0 = 0.0
+      let w1 = 0.0
+      if (node.mesh.weights) {
+        w0 = node.mesh.weights[0]
+        w1 = node.mesh.weights[1] ?? 0.0
+      }
+      gl.uniform1f(program.uniforms.uMorphTargetWeight0, w0)
+      gl.uniform1f(program.uniforms.uMorphTargetWeight1, w1)
+
       for (const primitive of node.mesh.primitives) {
         this.renderPrimitive(primitive)
       }

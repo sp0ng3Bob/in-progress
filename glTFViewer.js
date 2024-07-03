@@ -31,11 +31,11 @@ const m101 = "./src/models/1Avocado/glTF-Binary/Avocado.glb"
 const m2 = "./src/models/2Helmet/FlightHelmet.gltf"
 const m3 = "./src/models/3Boombox/BoomBox.gltf"
 const m4 = "./src/models/4PBR/Box With Spaces.gltf"
-const m5 = "./src/models/5Animated/AnimatedCube-EMB.gltf"
+const m5 = "./src/models/5Animated/AnimatedCube.gltf"
 const m6 = "./src/models/6Skins/RiggedSimple.gltf" //also this... (GL_INVALID_OPERATION: Must have element array buffer bound.)
 const m7 = "./src/models/7Alpha/AlphaBlendModeTest.gltf"
 const m8 = "./src/models/8AnimateMorph/AnimatedMorphCube.gltf"
-const m9 = "./src/models/9BoxAnimated/BoxAnimated.gltf"
+const m9 = "./src/models/9BoxAnimated/BoxAnimated-EMB.gltf"
 const m10 = "./src/models/10AnimSkin/SimpleSkin.gltf"
 const m11 = "./src/models/11MorphTest/MorphPrimitivesTest.gltf"
 const m12 = "./src/models/12UltimateTest/MorphStressTest.gltf"
@@ -47,6 +47,81 @@ const m99 = "./src/models/99Unicode/Unicode❤♻Test.glb"
 const noModel = ""
 let model = noModel //m //m1
 const modelList = { "-": noModel, "Duck": m, "Suzanne": m0, "Sparse Accessors": m01, "Avocado": m1, "AvocadoBIN": m101, "Fight Helmet": m2, "BoomBox": m3, "Box": m4, "Animated Cube": m5, "Rigged Simple": m6, "Alpha Test": m7, "Morph Cube": m8, "BoxAnimated": m9, "Simple Skin": m10, "Morph Test": m11, "Stress Test": m12, "Color encoding": m13, "Simple rotation anim": m14, "Anim interpolations": m15, "Fox Multi Anim": m16, "Unicode test": m99 }
+const modelListCORS = {
+  "Box": "https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/main/2.0/Box/glTF-Embedded/Box.gltf",
+  "BoxInterleaved": "https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/main/2.0/BoxInterleaved/glTF-Embedded/BoxInterleaved.gltf",
+  "BoxTextured": "https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/main/2.0/BoxTextured/glTF-Embedded/BoxTextured.gltf",
+  "BoxTexturedNonPowerOfTwo": "https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/main/2.0/BoxTexturedNonPowerOfTwo/glTF-Embedded/BoxTexturedNonPowerOfTwo.gltf",
+  "BoxVertexColors": "https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/main/2.0/BoxVertexColors/glTF-Embedded/BoxVertexColors.gltf",
+  "Duck": "https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/main/2.0/Duck/glTF-Embedded/Duck.gltf",
+  "BoxAnimated": "https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/main/2.0/BoxAnimated/glTF-Embedded/BoxAnimated.gltf",
+  "RiggedSimple": "https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/main/2.0/RiggedSimple/glTF-Embedded/RiggedSimple.gltf",
+  "CesiumMilkTruck": "https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/main/2.0/CesiumMilkTruck/glTF-Embedded/CesiumMilkTruck.gltf",
+  "RiggedFigure": "https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/main/2.0/RiggedFigure/glTF-Embedded/RiggedFigure.gltf",
+  "CesiumMan": "https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/main/2.0/CesiumMan/glTF-Embedded/CesiumMan.gltf",
+  "2CylinderEngine": "https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/main/2.0/2CylinderEngine/glTF-Embedded/2CylinderEngine.gltf",
+  "BrainStem": "https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/main/2.0/BrainStem/glTF-Embedded/BrainStem.gltf",
+  "ReciprocatingSaw": "https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/main/2.0/ReciprocatingSaw/glTF-Embedded/ReciprocatingSaw.gltf",
+  "MultiUVTest": "https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/main/2.0/MultiUVTest/glTF-Embedded/MultiUVTest.gltf",
+  "VC": "https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/main/2.0/VC/glTF-Embedded/VC.gltf",
+  "Buggy": "https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/main/2.0/Buggy/glTF-Embedded/Buggy.gltf",
+  "OrientationTest": "https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/main/2.0/OrientationTest/glTF-Embedded/OrientationTest.gltf",
+  "TextureCoordinateTest": "https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/main/2.0/TextureCoordinateTest/glTF-Embedded/TextureCoordinateTest.gltf",
+  "TextureSettingsTest": "https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/main/2.0/TextureSettingsTest/glTF-Embedded/TextureSettingsTest.gltf",
+  "VertexColorTest": "https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/main/2.0/VertexColorTest/glTF-Embedded/VertexColorTest.gltf",
+  "TriangleWithoutIndices": "https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/main/2.0/TriangleWithoutIndices/glTF-Embedded/TriangleWithoutIndices.gltf",
+  "Triangle": "https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/main/2.0/Triangle/glTF-Embedded/Triangle.gltf",
+  "AnimatedTriangle": "https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/main/2.0/AnimatedTriangle/glTF-Embedded/AnimatedTriangle.gltf",
+  "SimpleMeshes": "https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/main/2.0/SimpleMeshes/glTF-Embedded/SimpleMeshes.gltf",
+  "MultipleScenes": "https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/main/2.0/MultipleScenes/glTF-Embedded/MultipleScenes.gltf",
+  "SimpleMorph": "https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/main/2.0/SimpleMorph/glTF-Embedded/SimpleMorph.gltf",
+  "SimpleSparseAccessor": "https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/main/2.0/SimpleSparseAccessor/glTF-Embedded/SimpleSparseAccessor.gltf",
+  "DamagedHelmet": "https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/main/2.0/DamagedHelmet/glTF-Embedded/DamagedHelmet.gltf",
+  "Cameras": "https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/main/2.0/Cameras/glTF-Embedded/Cameras.gltf",
+  "SimpleSkin": "https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/main/2.0/SimpleSkin/glTF-Embedded/SimpleSkin.gltf",
+  "NormalTangentTest": "https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/main/2.0/NormalTangentTest/glTF-Embedded/NormalTangentTest.gltf",
+  "AlphaBlendModeTest": "https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/main/2.0/AlphaBlendModeTest/glTF-Embedded/AlphaBlendModeTest.gltf",
+  "NormalTangentMirrorTest": "https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/main/2.0/NormalTangentMirrorTest/glTF-Embedded/NormalTangentMirrorTest.gltf",
+  "MetalRoughSpheres": "https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/main/2.0/MetalRoughSpheres/glTF-Embedded/MetalRoughSpheres.gltf"
+}
+/*{
+  "Box": "https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/main/2.0/Box/glTF-Embedded/Box.gltf",
+  "BoxInterleaved": "https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/main/2.0/BoxInterleaved/glTF-Embedded/BoxInterleaved.gltf",
+  "BoxTextured": "https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/main/2.0/BoxTextured/glTF-Embedded/BoxTextured.gltf",
+  "BoxTexturedNonPowerOfTwo": "https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/main/2.0/BoxTexturedNonPowerOfTwo/glTF-Embedded/BoxTexturedNonPowerOfTwo.gltf",
+  "BoxVertexColors": "https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/main/2.0/BoxVertexColors/glTF-Embedded/BoxVertexColors.gltf",
+  "Duck": "https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/main/2.0/Duck/glTF-Embedded/Duck.gltf",
+  "BoxAnimated": "https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/main/2.0/BoxAnimated/glTF-Embedded/BoxAnimated.gltf",
+  "RiggedSimple": "https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/main/2.0/RiggedSimple/glTF-Embedded/RiggedSimple.gltf",
+  "CesiumMilkTruck": "https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/main/2.0/CesiumMilkTruck/glTF-Embedded/CesiumMilkTruck.gltf",
+  "RiggedFigure": "https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/main/2.0/RiggedFigure/glTF-Embedded/RiggedFigure.gltf",
+  "CesiumMan": "https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/main/2.0/CesiumMan/glTF-Embedded/CesiumMan.gltf",
+  "2CylinderEngine": "https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/main/2.0/2CylinderEngine/glTF-Embedded/2CylinderEngine.gltf",
+  "BrainStem": "https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/main/2.0/BrainStem/glTF-Embedded/BrainStem.gltf",
+  "ReciprocatingSaw": "https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/main/2.0/ReciprocatingSaw/glTF-Embedded/ReciprocatingSaw.gltf",
+  "MultiUVTest": "https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/main/2.0/MultiUVTest/glTF-Embedded/MultiUVTest.gltf",
+  "VC": "https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/main/2.0/VC/glTF-Embedded/VC.gltf",
+  "Buggy": "https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/main/2.0/Buggy/glTF-Embedded/Buggy.gltf",
+  "OrientationTest": "https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/main/2.0/OrientationTest/glTF-Embedded/OrientationTest.gltf",
+  "TextureCoordinateTest": "https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/main/2.0/TextureCoordinateTest/glTF-Embedded/TextureCoordinateTest.gltf",
+  "TextureSettingsTest": "https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/main/2.0/TextureSettingsTest/glTF-Embedded/TextureSettingsTest.gltf",
+  "VertexColorTest": "https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/main/2.0/VertexColorTest/glTF-Embedded/VertexColorTest.gltf",
+  "TriangleWithoutIndices": "https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/main/2.0/TriangleWithoutIndices/glTF-Embedded/TriangleWithoutIndices.gltf",
+  "Triangle": "https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/main/2.0/Triangle/glTF-Embedded/Triangle.gltf",
+  "AnimatedTriangle": "https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/main/2.0/AnimatedTriangle/glTF-Embedded/AnimatedTriangle.gltf",
+  "SimpleMeshes": "https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/main/2.0/SimpleMeshes/glTF-Embedded/SimpleMeshes.gltf",
+  "MultipleScenes": "https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/main/2.0/MultipleScenes/glTF-Embedded/MultipleScenes.gltf",
+  "SimpleMorph": "https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/main/2.0/SimpleMorph/glTF-Embedded/SimpleMorph.gltf",
+  "SimpleSparseAccessor": "https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/main/2.0/SimpleSparseAccessor/glTF-Embedded/SimpleSparseAccessor.gltf",
+  "DamagedHelmet": "https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/main/2.0/DamagedHelmet/glTF-Embedded/DamagedHelmet.gltf",
+  "Cameras": "https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/main/2.0/Cameras/glTF-Embedded/Cameras.gltf",
+  "SimpleSkin": "https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/main/2.0/SimpleSkin/glTF-Embedded/SimpleSkin.gltf",
+  "NormalTangentTest": "https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/main/2.0/NormalTangentTest/glTF-Embedded/NormalTangentTest.gltf",
+  "AlphaBlendModeTest": "https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/main/2.0/AlphaBlendModeTest/glTF-Embedded/AlphaBlendModeTest.gltf",
+  "NormalTangentMirrorTest": "https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/main/2.0/NormalTangentMirrorTest/glTF-Embedded/NormalTangentMirrorTest.gltf",
+  "MetalRoughSpheres": "https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/main/2.0/MetalRoughSpheres/glTF-Embedded/MetalRoughSpheres.gltf"
+}*/
+
 let scenesList = {}
 let camerasList = {}
 const globalLightsList = {}
@@ -110,6 +185,7 @@ export class App extends Application {
     this.animationsPlayer = new AnimationsPlayer()
     this.frameCount = 1
     this.animationTimeLogs = logsDOMElement.querySelector("#animationTime")
+    this.animationTimeLogstextContent = 0
 
     // User Controls
     this.controls = new Controls()
@@ -123,7 +199,7 @@ export class App extends Application {
     this.state.lightsList.push(new PointLight({ position: "+0.6, 0.1, 0", color: [200, 120, 200], type: "" }))
 
     //this.initGUI()
-    //**/!*/!*!/*!/*!/*!/*!/!*/!*/!*/!*/!*/!*/!*!/*!/**!/!*/!*/*!/*!/*!*!/*!/*!/*!/*!/*/!*/!*/!*/!************?**?*??
+    //**/!* /!*!/ * !/*!/*!/*!/!*/!* /!*/! * /!*/! * /!*!/ * !/**!/!*/!*/*!/*!/*!*!/*!/*!/*!/*!/*/ !* /!*/! * /!************?**?*??
     this.cameraTheta = 0.0   // Initial angle in the XY plane
     this.cameraPhi = Math.PI / 2
 
@@ -145,7 +221,9 @@ export class App extends Application {
     (with options for translation, rotation, and scaling). */
     this.modelsFolder = gui.addFolder("Model")
     this.modelsFolder.domElement.children[0].children[0].classList.add("green")
-    this.modelsFolder.add(this.state, "selectedModel", modelList).onChange(this.changeModel.bind(this))
+    this.modelSelector = this.modelsFolder.add(this.state, "selectedModel", { ...modelList, ...{ "-----": "" }, ...modelListCORS }).onChange(this.changeModel.bind(this))
+    this.modelsFolder.add(this.state, "selectedModel").listen().domElement.children[0].setAttribute("disabled", "disabled") //.onFinishChange(this.changeModel.bind(this))
+    //this.modelsFolder.add(this.state, "selectedModel").onFinishChange(this.changeModelWithUrl.bind(this))
     this.modelsFolder.open()
 
     // Model information controls
@@ -252,12 +330,12 @@ export class App extends Application {
                   GL_NEAREST_MIPMAP_LINEAR - no filtering, smooth transition between mipmaps
                   GL_LINEAR_MIPMAP_NEAREST - filtering, sharp switching between mipmaps
                   GL_LINEAR_MIPMAP_LINEAR - filtering, smooth transition between mipmaps
-
+     
                   So:
                   GL_LINEAR is bilinear
                   GL_LINEAR_MIPMAP_NEAREST is bilinear with mipmaps
                   GL_LINEAR_MIPMAP_LINEAR is trilinear
-
+     
        (12) Allow global enabling and disabling of mipmaps. */
     this.globalFolder = gui.addFolder("Global settings")
     this.globalFolder.domElement.children[0].children[0].classList.add("red")
@@ -454,6 +532,13 @@ export class App extends Application {
   //****************************************************************************************************************
 
   async changeModel(id) {
+    if (this.modelSelector.domElement.children[0].classList.contains("disabled")) return
+    //if (id != "") {
+    this.modelSelector.domElement.children[0].setAttribute("disabled", "disabled")
+    this.modelSelector.domElement.children[0].blur()
+    //this.modelSelector.domElement.children[0].classList.toggle("disabled")
+    //this.gui.domElement.classList.toggle("disabled")
+
     if (this.animationsPlayer.isPlaying) {
       this.stopAnimations()
     }
@@ -479,6 +564,14 @@ export class App extends Application {
     }
 
     this.updateGUI()
+
+    //this.modelSelector.domElement.children[0].classList.toggle("disabled")
+    this.modelSelector.domElement.children[0].removeAttribute("disabled")
+    this.modelSelector.domElement.children[0].focus()
+    //this.gui.domElement.classList.toggle("disabled")
+    //} else {
+    //reset scene with no gltf model selected
+    //}
   }
 
   setTextureStuff(nodes) {
@@ -696,6 +789,8 @@ export class App extends Application {
         }
         this.animationTimeLogs.textContent = this.animationsPlayer.getCurrentTime().toFixed(3)
       }
+
+      // Skins
 
       //this.gl.clear(this.gl.COLOR_BUFFER_BIT | this.gl.DEPTH_BUFFER_BIT)
 

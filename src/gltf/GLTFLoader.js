@@ -198,6 +198,20 @@ export class GLTFLoader {
     return bufferView;
   }
 
+  loadSparseBuffer(nameOrIndex, sparseData) {
+    const gltfSpec = this.findByNameOrIndex(this.gltf.bufferViews, nameOrIndex);
+    if (this.cache.has(gltfSpec)) {
+      return this.cache.get(gltfSpec);
+    }
+
+    const bufferView = new BufferView({
+      byteLength: sparseData.length,
+      buffer: sparseData.buffer,
+    });
+    this.cache.set(gltfSpec, bufferView);
+    return bufferView;
+  }
+
   async loadAccessor(nameOrIndex) {
     const gltfSpec = this.findByNameOrIndex(this.gltf.accessors, nameOrIndex);
     if (this.cache.has(gltfSpec)) {
@@ -230,26 +244,41 @@ export class GLTFLoader {
     if (gltfSpec.sparse) {
       const { count, values, indices } = gltfSpec.sparse;
 
-      const valuesAccessor = await this.loadBufferView(values.bufferView) //(this.accessors[values.accessor]);
-      const indicesAccessor = await this.loadBufferView(indices.bufferView) //this.parseAccessor(this.accessors[indices.accessor]);
+      const valuesAccessor = await this.loadBufferView(values.bufferView)
+      const indicesAccessor = await this.loadBufferView(indices.bufferView)
 
       const ValuesArray = typedArrayConstructor[gltfSpec.componentType]
-      const sparseData = new ValuesArray(byteLength)
+      let sparseData
+      if (gltfSpec.bufferView) {
+        let startingData = await this.loadBufferView(gltfSpec.bufferView)
+        sparseData = new ValuesArray(startingData.buffer, startingData.byteOffset, startingData.byteLength / ValuesArray.BYTES_PER_ELEMENT)
+      } else {
+        sparseData = new ValuesArray(byteLength)
+        sparseData.set(0.0)
+      }
 
       const IndicesArray = typedArrayConstructor[indices.componentType]
       const indicesData = new IndicesArray(indicesAccessor.buffer, indicesAccessor.byteOffset, indicesAccessor.byteLength / IndicesArray.BYTES_PER_ELEMENT)
       const valuesData = new ValuesArray(valuesAccessor.buffer, valuesAccessor.byteOffset, valuesAccessor.byteLength / ValuesArray.BYTES_PER_ELEMENT)
+
+      console.log("Sparse Accessor Debugging:");
+      console.log("Indices Data:", indicesData);
+      console.log("Values Data:", valuesData);
+
       for (let i = 0; i < count; i++) { //indicesData.length; i++) {
         const index = indicesData[i]
         const value = valuesData.subarray(i * type, (i + 1) * type)
-        sparseData.set(value, index * type)
+        console.log(`Setting value at index ${index}:`, value);
+        sparseData.set(value, index * type);
       }
 
-      //bufferView = await this.loadBufferView(gltfSpec.bufferView)
-      bufferView = new BufferView({
+      console.log("Final Sparse Data:", sparseData);
+      bufferView = sparseData
+
+      /*bufferView = new BufferView({
         buffer: sparseData.buffer,
-        byteLength: byteLength //sparseData.byteLength //ValuesArray.BYTES_PER_ELEMENT //gltfSpec.count //gltfSpec.byteLength //type //sparseData.buffer.byteLength
-      })
+        byteLength: sparseData.length * ValuesArray.BYTES_PER_ELEMENT //sparseData.byteLength //ValuesArray.BYTES_PER_ELEMENT //gltfSpec.count //gltfSpec.byteLength //type //sparseData.buffer.byteLength
+      })*/
     } else {
       bufferView = await this.loadBufferView(gltfSpec.bufferView)
     }
@@ -374,8 +403,8 @@ export class GLTFLoader {
 
     const options = { primitives: [] } //, weights: [] };
     for (const primitiveSpec of gltfSpec.primitives) {
-      const primitiveOptions = { targets: {} };
-      primitiveOptions.attributes = {};
+      const primitiveOptions = { attributes: {} };
+      //primitiveOptions.attributes = {};
       for (const name in primitiveSpec.attributes) {
         primitiveOptions.attributes[name] = await this.loadAccessor(primitiveSpec.attributes[name]);
       }
@@ -387,8 +416,9 @@ export class GLTFLoader {
       }
       primitiveOptions.mode = primitiveSpec.mode;
 
-      // morphing targets
+      // morphing targets - blend shapes
       if (primitiveSpec.targets) {
+        primitiveOptions.targets = []
         for (const target in primitiveSpec.targets) {
           primitiveOptions.targets[target] = {}
           for (const name in primitiveSpec.targets[target]) {
@@ -469,7 +499,11 @@ export class GLTFLoader {
     }
 
     if (gltfSpec.skin !== undefined) {
-      options.skin = await this.loadSkin(gltfSpec.skin);
+      options.skin = await this.loadSkin(gltfSpec.skin)
+      /*options.skin = []
+      for (const skin in gltfSpec.skins) {
+        options.skin.push(await this.loadSkin(skin))
+      }*/
     }
 
     const node = new Node(options);
@@ -512,16 +546,13 @@ export class GLTFLoader {
     }
 
     let options = { joints: [] }
-    options.name = gltfSpec.name ?? options.name
+    options.name = `Skin_${nameOrIndex}` //gltfSpec.name ?? `Skin_${nameOrIndex}`
 
     if (gltfSpec.skeleton) {
       options.skeleton = await this.loadNode(gltfSpec.skeleton)
     }
-    /*for (const jointIndex of gltfSpec.joints ?? []) {
-      options.joints[jointIndex] = await this.loadNode(jointIndex)
-    }*/
 
-    for (const jointIndex of gltfSpec.joints ?? []) {
+    for (const jointIndex of gltfSpec.joints) {
       options.joints.push(await this.loadNode(jointIndex))
     }
 
@@ -540,7 +571,7 @@ export class GLTFLoader {
       return this.cache.get(gltfSpec)
     }
 
-    let options = { name: gltfSpec.name ?? "_", channels: [] } //, samplers: [] }
+    let options = { name: gltfSpec.name ?? `Animation_${nameOrIndex}`, channels: [] } //, samplers: [] }
 
     for (const channelIndex in gltfSpec.channels) {
       const channel = {}
