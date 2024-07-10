@@ -9,7 +9,7 @@ export class AnimationsPlayer {
     this.isPaused = false
     this.animationsToPlay = new Set()
     this.animationsCount = 0
-    //this.startTime = 0
+    this.animationsDuration = 0
   }
 
   addAnimations(animations) {
@@ -31,7 +31,7 @@ export class AnimationsPlayer {
   }
 
   getCurrentTime() {
-    return this.currentTime % this.animationsDuration //this.animations[0].duration
+    return this.currentTime % this.animationsDuration || 0 //this.animations[0].duration
   }
 
   play() {

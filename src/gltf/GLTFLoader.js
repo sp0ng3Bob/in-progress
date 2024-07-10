@@ -254,7 +254,7 @@ export class GLTFLoader {
         sparseData = new ValuesArray(startingData.buffer, startingData.byteOffset, startingData.byteLength / ValuesArray.BYTES_PER_ELEMENT)
       } else {
         sparseData = new ValuesArray(byteLength)
-        sparseData.set(0.0)
+        //sparseData.set(0.0) //not really needed
       }
 
       const IndicesArray = typedArrayConstructor[indices.componentType]

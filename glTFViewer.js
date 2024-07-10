@@ -22,7 +22,7 @@ const mat4 = glMatrix.mat4
 const quat = glMatrix.quat
 
 //let m = "./models/Cameras.gltf"
-//let m = "./models/MultipleScenes.gltf" //doesnt work.. again (in renderer -> if (primitive.indices) ...)
+//let m = "./models/MultipleScenes.gltf" //doesnt work.. again (in renderer -> if (primitive.indices) ...) --> whn changing from 0 back to 1: GL_INVALID_OPERATION: Insufficient buffer size.
 const m = "./src/models/Duck.gltf"
 const m0 = "./src/models/0Suzanne/Suzanne.gltf"
 const m01 = "./src/models/0.1SparseAcc/SimpleSparseAccessor.gltf"
@@ -89,7 +89,7 @@ const modelListCORS = {
 
 let scenesList = {}
 let camerasList = {}
-const globalLightsList = {}
+const globalLightsList = []
 const lightAttenuationList = { "Constant": 0, "Linear": 1, "Quadratic": 2 }
 let proceduralModelsList = [] //{}
 const mipmapsList = { "NEAREST_MIPMAP_NEAREST": 9984, "NEAREST_MIPMAP_LINEAR": 9986, "LINEAR_MIPMAP_NEAREST": 9985, "LINEAR_MIPMAP_LINEAR": 9987 }
@@ -158,10 +158,19 @@ export class App extends Application {
 
     // Lights
     this.lightsNumberLimit = 8
+
+    //put the light and the procgeo sphere in the same object - TODO
     this.state.lightsList.push(new PointLight({ position: "-0.6, 0.1, 0", color: [255, 120, 120], type: "" }))
+    globalLightsList.push(Geo.createSphere(this.gl, 0.01, [-0.6, 0.1, 0], "rotation?!", [255, 120, 120], "./src/models/1Avocado/glTF/Avocado_baseColor.png"))
+
     this.state.lightsList.push(new PointLight({ position: "-0.3, 0.1, 0", color: [100, 255, 100], type: "" }))
+    //globalLightsList.push(Geo.createSphere(this.gl, 0.1, [-0.3, 0.1, 0], "rotation?!", [100, 255, 100], "./src/models/1Avocado/glTF/Avocado_baseColor.png"))
+
     this.state.lightsList.push(new PointLight({ position: "+0.3, 0.1, 0", color: [127, 127, 255], type: "" }))
+    //globalLightsList.push(Geo.createSphere(this.gl, 0.1, [0.3, 0.1, 0], "rotation?!", [127, 127, 255], "./src/models/1Avocado/glTF/Avocado_baseColor.png"))
+
     this.state.lightsList.push(new PointLight({ position: "+0.6, 0.1, 0", color: [200, 120, 200], type: "" }))
+    //globalLightsList.push(Geo.createSphere(this.gl, 0.01, [0.6, 0.1, 0], "rotation?!", [200, 120, 200], "./src/models/1Avocado/glTF/Avocado_baseColor.png"))
 
     //this.initGUI()
     //**/!* /!*!/ * !/*!/*!/*!/!*/!* /!*/! * /!*/! * /!*!/ * !/**!/!*/!*/*!/*!/*!*!/*!/*!/*!/*!/*/ !* /!*/! * /!************?**?*??
@@ -186,7 +195,7 @@ export class App extends Application {
     (with options for translation, rotation, and scaling). */
     this.modelsFolder = gui.addFolder("Model")
     this.modelsFolder.domElement.children[0].children[0].classList.add("green")
-    this.modelSelector = this.modelsFolder.add(this.state, "selectedModel", { ...modelList, ...{ "-----": "" }, ...modelListCORS }).onChange(this.changeModel.bind(this))
+    this.modelSelector = this.modelsFolder.add(this.state, "selectedModel", { ...modelList, ...{ "-v- Embeded glLTs -v-": "" }, ...modelListCORS }).onChange(this.changeModel.bind(this))
     this.modelsFolder.add(this.state, "selectedModel").listen().domElement.children[0].setAttribute("disabled", "disabled") //.onFinishChange(this.changeModel.bind(this))
     //this.modelsFolder.add(this.state, "selectedModel").onFinishChange(this.changeModelWithUrl.bind(this))
     this.modelsFolder.open()
@@ -311,7 +320,7 @@ export class App extends Application {
     globalTextureFolder.add(this.state, "wrappingModeS", wrappingList).listen().onChange(this.changeWrappingS.bind(this))
     globalTextureFolder.add(this.state, "wrappingModeT", wrappingList).listen().onChange(this.changeWrappingT.bind(this))
     globalTextureFolder.add(this.state, "mipMaps").listen().onChange(this.changeMips.bind(this))
-    globalTextureFolder.add(this.state, "minFilterMode", { ...filteringList, ...mipmapsList }).listen().onChange(this.changeFilteringMin.bind(this))
+    globalTextureFolder.add(this.state, "minFilterMode", { ...filteringList }).listen().onChange(this.changeFilteringMin.bind(this))
     globalTextureFolder.add(this.state, "magFilterMode", { ...filteringList, ...mipmapsList }).listen().onChange(this.changeFilteringMag.bind(this))
     //this.globalFolder.domElement.style.display = "none"
   }
@@ -428,19 +437,19 @@ export class App extends Application {
 
   /* PROCEDURAL GEOMETRIES */
   addGeoPlane() {
-    proceduralModelsList.push(Geo.createPlane(this.gl, 1, [0, 0, 0], [170, 170, 170], "./src/models/1Avocado/glTF/Avocado_baseColor.png"))
+    proceduralModelsList.push(Geo.createPlane(this.gl, 1, [0, 0, 0], "rotation?!", [170, 170, 170], "./src/models/1Avocado/glTF/Avocado_baseColor.png"))
   }
 
   addGeoCube() {
-    console.log()
+    proceduralModelsList.push(Geo.createCube(this.gl, 1, [0, 0, 0], "rotation?!", [170, 170, 170], "./src/models/1Avocado/glTF/Avocado_baseColor.png"))
   }
 
   addGeoSphere() {
-    console.log()
+    proceduralModelsList.push(Geo.createSphere(this.gl, 1, [0, 0, 0], "rotation?!", [170, 170, 170], "./src/models/1Avocado/glTF/Avocado_baseColor.png"))
   }
 
   addGeoTorus() {
-    console.log()
+    proceduralModelsList.push(Geo.createTorus(this.gl, 1, 0.35, [0, 0, 0], "rotation?!", [170, 170, 170], "./src/models/1Avocado/glTF/Avocado_baseColor.png"))
   }
   /****************************************************************************************************************/
 
@@ -498,15 +507,17 @@ export class App extends Application {
 
   async changeModel(id) {
     if (this.modelSelector.domElement.children[0].classList.contains("disabled")) return
-    //if (id != "") {
-    this.modelSelector.domElement.children[0].setAttribute("disabled", "disabled")
-    this.modelSelector.domElement.children[0].blur()
-    //this.modelSelector.domElement.children[0].classList.toggle("disabled")
-    //this.gui.domElement.classList.toggle("disabled")
 
     if (this.animationsPlayer.isPlaying) {
       this.stopAnimations()
     }
+
+    this.modelSelector.domElement.children[0].setAttribute("disabled", "disabled")
+    this.modelSelector.domElement.children[0].blur()
+
+    //if (id != "") {
+    //this.modelSelector.domElement.children[0].classList.toggle("disabled")
+    //this.gui.domElement.classList.toggle("disabled")
 
     model = id
     await this.loadSceneAndCamera()
@@ -527,6 +538,10 @@ export class App extends Application {
     } else {
       this.animationsPlayer.delete()
     }
+    //} else {
+    //  this.scene.nodes = []
+    //  this.animationsPlayer.delete()
+    //}
 
     this.updateGUI()
 
@@ -720,8 +735,8 @@ export class App extends Application {
     this.scene = this.scenes[id]
     const meshID = this.loader.gltf.scenes[id].nodes[0]
     this.extractPosIndBB(meshID)
-    this.updateGUI()
     this.renderer.prepareScene(this.scene)
+    this.updateGUI()
   }
 
   changeCamera(id) {
@@ -752,8 +767,8 @@ export class App extends Application {
         } else {
           this.frameCount++
         }
-        this.animationTimeLogs.textContent = this.animationsPlayer.getCurrentTime().toFixed(3)
       }
+      this.animationTimeLogs.textContent = this.animationsPlayer.getCurrentTime().toFixed(3)
 
       // Skins
 
@@ -766,6 +781,7 @@ export class App extends Application {
       //this.lights()
       //this.renderer.prepareScene(this.scene)
       this.scene.geoNodes = proceduralModelsList
+      this.scene.lights = globalLightsList
       this.renderer.render(this.scene, this.camera, this.lights())
 
       //if (this.state.axesShown) { this.axes.draw(this.camera) }

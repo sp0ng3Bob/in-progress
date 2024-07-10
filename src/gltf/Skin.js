@@ -34,24 +34,37 @@ export class Skin {
     return ibm
   }
 
-  updateJointMatrices(i) {
+  updateJointMatrices(i, childNode, parentMatrix) {
     const jointMatrix = mat4.identity(mat4.create())
-    const joint = this.joints[i]
-    const worldInverse = mat4.invert(mat4.create(), joint.matrix)
+    const joint = childNode ? childNode : this.joints[i] //typeof i == "object" ? i : this.joints[i]
 
-    mat4.mul(jointMatrix, joint.matrix, this.inverseBindMatrices[i])
-    //mat4.mul(jointMatrix, worldInverse, this.inverseBindMatrices[i])
+    // If there is a parent transform, multiply it with the current joint's matrix
+    if (parentMatrix || joint.parent?.matrix) {
+      mat4.mul(jointMatrix, parentMatrix ?? joint.parent.matrix, joint.matrix);
+    } else {
+      mat4.copy(jointMatrix, joint.matrix);
+    }
 
-    //mat4.mul(jointMatrix, worldInverse, jointMatrix)
+    // Apply the inverse bind matrix
+    mat4.mul(jointMatrix, jointMatrix, this.inverseBindMatrices[i]);
 
+    // Recursively update child joints
     joint.children.forEach(childNode => {
+      this.updateJointMatrices(i, childNode, jointMatrix);
+    });
+
+    /*const worldInverse = mat4.invert(mat4.create(), joint.matrix)
+    mat4.mul(jointMatrix, joint.matrix, this.inverseBindMatrices[i])
+    */
+
+    /*joint.children.forEach(childNode => {
       const tmpMat = mat4.identity(mat4.create())
       mat4.mul(tmpMat, joint.matrix, childNode.matrix)
       //mat4.mul(tmpMat, worldInverse, childNode.matrix)
 
       mat4.mul(tmpMat, tmpMat, this.inverseBindMatrices[i])
       mat4.mul(jointMatrix, jointMatrix, tmpMat)
-    })
+    })*/
 
     return jointMatrix
   }

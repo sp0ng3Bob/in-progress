@@ -343,28 +343,61 @@ export class Renderer {
 
     const mvpMatrix = this.getViewProjectionMatrix(camera)
 
-    for (const light of lights.lights) {
-      //this.renderPrimitive()
+    for (const light of scene.lights) {
+      this.renderGeoNode(light, null, mvpMatrix)
+    }
+
+    for (const geo of scene.geoNodes) {
+      this.renderGeoNode(geo, null, mvpMatrix)
     }
 
     for (const node of scene.nodes) {
       this.renderNode(node, mvpMatrix)
     }
 
-    for (const geo of scene.geoNodes) {
-      //this.renderPrimitive()
-      /*const mvp = mat4.create()
-      mat4.mul(mvp, mvpMatrix, geo.matrix)
-
-      gl.bindVertexArray(geo.vao)
-      gl.bindBuffer(gl.ARRAY_BUFFER, geo.verticesBuffer)
-
-      const program = this.programs.simple
-      gl.uniformMatrix4fv(program.uniforms.uMvpMatrix, false, mvp)
-      gl.drawArrays(gl.TRIANGLES, 0, geo.vertexCount)*/
-    }
     //gl.bindBuffer(gl.ARRAY_BUFFER, null)
     //gl.useProgram(null)
+  }
+
+  renderGeoNode(geoBuffers, programInfoo, mvpMatrix) {
+    const gl = this.gl;
+    const programInfo = this.programs.simple;
+    mvpMatrix = mat4.clone(mvpMatrix)
+
+    // Bind position buffer
+    gl.bindBuffer(gl.ARRAY_BUFFER, geoBuffers.position);
+    gl.vertexAttribPointer(
+      programInfo.attributes.aPosition,
+      3, gl.FLOAT, false, 0, 0);
+    gl.enableVertexAttribArray(programInfo.attributes.aPosition);
+
+    // Bind normal buffer
+    gl.bindBuffer(gl.ARRAY_BUFFER, geoBuffers.normals);
+    gl.vertexAttribPointer(
+      programInfo.attributes.aNormal,
+      3, gl.FLOAT, false, 0, 0);
+    gl.enableVertexAttribArray(programInfo.attributes.aNormal);
+
+    // Bind index buffer
+    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, geoBuffers.indices);
+
+    // Use shader program
+    //gl.useProgram(programInfo.program);
+
+    // Set uniforms (like model-view-projection matrix)
+    gl.uniformMatrix4fv(programInfo.uniforms.uMvpMatrix, false, mvpMatrix)
+    gl.uniform4fv(programInfo.uniforms.uBaseColor, [1, 1, 1, 1])
+    gl.uniform1f(programInfo.uniforms.uMetallicFactor, 0.5)
+    gl.uniform1f(programInfo.uniforms.uRoughnessFactor, 0.5)
+    gl.uniform1i(programInfo.uniforms.uHasSkinning, 0)
+    gl.uniform1i(programInfo.uniforms.uHasBaseColorTexture, 0)
+    gl.uniform1i(programInfo.uniforms.uHasNormalTexture, 0)
+    gl.uniform1i(programInfo.uniforms.uHasEmissiveTexture, 0)
+    gl.uniform1i(programInfo.uniforms.uHasMetallicRoughnessTexture, 0)
+    gl.uniform1i(programInfo.uniforms.uHasOcclusionTexture, 0)
+
+    // Draw the plane
+    gl.drawElements(gl.TRIANGLES, geoBuffers.indexCount, gl.UNSIGNED_SHORT, 0);
   }
 
   renderNode(node, mvpMatrix) {
@@ -379,11 +412,11 @@ export class Renderer {
       //node.skin.updateJointMatrices()
       for (const i in node.skin.joints) {
         //gl.uniformMatrix4fv(program.uniforms.u_jointMatrix[i], false, node.skin.getJointMatrix(Number(i)))
-        gl.uniformMatrix4fv(program.uniforms[`u_jointMatrix[${i}]`], false, node.skin.updateJointMatrices(Number(i)))
+        gl.uniformMatrix4fv(program.uniforms[`u_jointMatrix[${i}]`], false, node.skin.updateJointMatrices(Number(i), null, null))
       }
-      gl.uniform1i(program.uniforms.hasSkinning, 1)
+      gl.uniform1i(program.uniforms.uHasSkinning, 1)
     } else {
-      gl.uniform1i(program.uniforms.hasSkinning, 0)
+      gl.uniform1i(program.uniforms.uHasSkinning, 0)
     }
 
     if (node.mesh) {
