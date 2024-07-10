@@ -780,8 +780,8 @@ export class App extends Application {
 
       //this.lights()
       //this.renderer.prepareScene(this.scene)
-      this.scene.geoNodes = proceduralModelsList
-      this.scene.lights = globalLightsList
+      //this.scene.geoNodes = proceduralModelsList
+      //this.scene.lights = globalLightsList
       this.renderer.render(this.scene, this.camera, this.lights())
 
       //if (this.state.axesShown) { this.axes.draw(this.camera) }

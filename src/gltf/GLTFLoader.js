@@ -63,81 +63,70 @@ export class GLTFLoader {
   }
 
   async load(url) {
-    const extension = url.split('.').pop().toLowerCase();
+    const extension = url.split('.').pop().toLowerCase()
     this.gltfUrl = new URL(url, window.location)
     if (extension === 'glb') {
-      await this.loadGLB(url);
+      await this.loadGLB(url)
     } else if (extension === 'gltf') {
-      await this.loadGLTF(url);
+      await this.loadGLTF(url)
     } else {
-      console.error('Unsupported file format');
+      console.error('Unsupported file format')
     }
   }
 
   async loadGLTF(url) {
     try {
-      //this.gltfUrl = new URL(url, window.location);
-      this.gltf = await this.fetchJson(url);
-      this.defaultScene = this.gltf.scene || 0;
-      this.defaultCamera = 0;
-      this.glbBuffers = null;
+      this.gltf = await this.fetchJson(url)
+      this.defaultScene = this.gltf.scene || 0
+      this.defaultCamera = 0
+      this.glbBuffers = null
     } catch (error) {
-      console.error(error);
+      console.error(error)
     }
   }
 
   async loadGLB(url) {
     try {
-      //const response = await fetch(url);
-      //const data = await response.arrayBuffer();
-      const data = await this.fetchBuffer(url);
-      this.gltf = await this.parseGLB(data);
-      this.defaultScene = this.gltf.scene || 0;
-      this.defaultCamera = 0;
+      const data = await this.fetchBuffer(url)
+      this.gltf = await this.parseGLB(data)
+      this.defaultScene = this.gltf.scene || 0
+      this.defaultCamera = 0
     } catch (error) {
-      console.error(error);
+      console.error(error)
     }
   }
 
   async parseGLB(glb) {
-    const header = new DataView(glb, 0, 12);
-    const magic = header.getUint32(0, true);
-    const version = header.getUint32(4, true);
-    const length = header.getUint32(8, true);
+    const header = new DataView(glb, 0, 12)
+    const magic = header.getUint32(0, true)
+    const version = header.getUint32(4, true)
+    const length = header.getUint32(8, true)
 
     if (magic !== 0x46546C67) {
-      console.error('Invalid GLB magic number');
-      return null;
+      console.error('Invalid GLB magic number')
+      return null
     }
 
-    let offset = 12;
-    let json = null;
-    let binaryBuffer = null;
+    let offset = 12
+    let json = null
+    let binaryBuffer = null
 
     while (offset < length) {
-      const chunkLength = new DataView(glb, offset, 4).getUint32(0, true);
-      const chunkType = new DataView(glb, offset + 4, 4).getUint32(0, true);
-      offset += 8;
+      const chunkLength = new DataView(glb, offset, 4).getUint32(0, true)
+      const chunkType = new DataView(glb, offset + 4, 4).getUint32(0, true)
+      offset += 8
 
       if (chunkType === 0x4E4F534A) { // JSON
-        const jsonText = new TextDecoder().decode(new Uint8Array(glb, offset, chunkLength));
-        json = JSON.parse(jsonText);
+        const jsonText = new TextDecoder().decode(new Uint8Array(glb, offset, chunkLength))
+        json = JSON.parse(jsonText)
       } else if (chunkType === 0x004E4942) { // Binary
-        binaryBuffer = glb.slice(offset, offset + chunkLength);
+        binaryBuffer = glb.slice(offset, offset + chunkLength)
       }
 
-      offset += chunkLength;
+      offset += chunkLength
     }
 
-    /*for (let buffer of json.buffers) {
-
-    }
-
-    for (let image of json.images) {
-
-    }*/
-
-    this.glbBuffers = binaryBuffer;
+    this.glbBuffers = binaryBuffer
     return json
   }
 
@@ -153,13 +142,15 @@ export class GLTFLoader {
       this.cache.set(gltfSpec, image);
       return image;
     } else {
-      const bufferView = await this.loadBufferView(gltfSpec.bufferView);
-      const blob = new Blob([bufferView], { type: gltfSpec.mimeType });
-      const url = URL.createObjectURL(blob);
-      const image = await this.fetchImage(url);
-      URL.revokeObjectURL(url);
-      this.cache.set(gltfSpec, image);
-      return image;
+      const bufferView = await this.loadBufferView(gltfSpec.bufferView)
+      const imageBuffer = this.glbBuffers.slice(bufferView.byteOffset, bufferView.byteOffset + bufferView.byteLength)
+      const blob = new Blob([imageBuffer], { type: gltfSpec.mimeType })
+      const image = new Image()
+      image.src = URL.createObjectURL(blob)
+      await image.decode()
+      URL.revokeObjectURL(image.src)
+      this.cache.set(gltfSpec, image)
+      return image
     }
   }
 
