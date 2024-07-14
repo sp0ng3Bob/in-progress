@@ -69,26 +69,25 @@ export class Controls {
     //console.log()
     let zoomSpeed = 0.01
     if (e.shiftKey) { zoomSpeed = 0.1 }
-    if (camera.translation[2] + e.deltaY * zoomSpeed * this.zoomFactor > 0.03) {
-      camera.translation[2] += e.deltaY * zoomSpeed * this.zoomFactor //e.deltaY * this.zoomFactor
-      camera.updateMatrix()
-    }
+    //if (camera.translation[2] + e.deltaY * zoomSpeed * this.zoomFactor > 0.03) {
+    camera.translation[2] += e.deltaY * zoomSpeed * this.zoomFactor //e.deltaY * this.zoomFactor
+    camera.updateMatrix()
+    //}
   }
 
   /* KEYBOARD INPUTS */
   processKeyboardInput(e, camera) {
     switch (e.code) {
-      //Move camera
-      case "KeyA": //left
+      case "KeyA":
         camera.translation[0] -= (e.shiftKey ? 10 : 1) * 0.01
         break
-      case "KeyD": //right
+      case "KeyD":
         camera.translation[0] += (e.shiftKey ? 10 : 1) * 0.01
         break
-      case "KeyS": //down
+      case "KeyS":
         camera.translation[1] += (e.shiftKey ? 10 : 1) * 0.01
         break
-      case "KeyW": //up
+      case "KeyW":
         camera.translation[1] -= (e.shiftKey ? 10 : 1) * 0.01
         break
 

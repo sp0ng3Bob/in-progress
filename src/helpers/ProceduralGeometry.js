@@ -3,38 +3,43 @@
 
 // proceduralGeometry.js
 
+import { updateMapping } from "./Textures.js"
 import glMatrix from "glMatrix"
 const mat4 = glMatrix.mat4
 
 //export const geometryObjects = [] // Initialize an array to store objects
 
 /* Private helpers */
-function createBuffer(gl, data, target = undefined, usage = undefined) {
+function createAndBindBuffer(gl, data, target = undefined, usage = undefined) {
   target = target ?? gl.ARRAY_BUFFER
   usage = usage ?? gl.STATIC_DRAW
 
   const buffer = gl.createBuffer();
   gl.bindBuffer(target, buffer);
-  gl.bufferData(target, data, usage);
+  if (data.length > 0) {
+    gl.bufferData(target, data, usage);
+  }
   return buffer;
 }
 
 function prepareBuffers(gl, bufferData) {
-  const { positions, normals, indices } = bufferData
+  const { positions, normals, indices, uvs } = bufferData
 
-  const positionBuffer = createBuffer(gl, positions);
-  const normalBuffer = createBuffer(gl, normals);
-  const indexBuffer = createBuffer(gl, indices, gl.ELEMENT_ARRAY_BUFFER);
+  const positionBuffer = createAndBindBuffer(gl, positions);
+  const normalBuffer = createAndBindBuffer(gl, normals);
+  const indexBuffer = createAndBindBuffer(gl, indices, gl.ELEMENT_ARRAY_BUFFER);
+  const uvBuffer = createAndBindBuffer(gl, uvs);
 
   return {
-    position: positionBuffer,
+    positions: positionBuffer,
     normals: normalBuffer,
     indices: indexBuffer,
-    indexCount: indices.length
+    indexCount: indices.length,
+    uvs: uvBuffer,
   };
 }
 
-function createPlaneGeometry(size = 2) {
+function createPlaneGeometry(size = 1, position) {
   const halfSize = size / 2;
   const positions = new Float32Array([
     -halfSize, 0, halfSize, // top-left
@@ -55,7 +60,14 @@ function createPlaneGeometry(size = 2) {
     2, 3, 0
   ]);
 
-  return { positions, normals, indices };
+  const uvs = new Float32Array([
+    0, 1, // top-left
+    1, 1, // top-right
+    1, 0, // bottom-right
+    0, 0 // bottom-left
+  ]);
+
+  return { positions, normals, indices, uvs };
 }
 
 function createCubeGeometry(size = 1) {
@@ -145,7 +157,9 @@ function createCubeGeometry(size = 1) {
     20, 21, 22, 20, 22, 23  // left
   ]);
 
-  return { positions, normals, indices };
+  const uvs = new Float32Array([])
+
+  return { positions, normals, indices, uvs };
 }
 
 function createSphereGeometry(radius = 1, latBands = 30, longBands = 30) {
@@ -182,17 +196,20 @@ function createSphereGeometry(radius = 1, latBands = 30, longBands = 30) {
     }
   }
 
+  const uvs = new Float32Array([])
+
   return {
     positions: new Float32Array(positions),
     normals: new Float32Array(normals),
-    indices: new Uint16Array(indices)
+    indices: new Uint16Array(indices),
+    uvs
   };
 }
 
 function createTorusGeometry(outerRadius = 1, innerRadius = 0.4, radialSegments = 30, tubularSegments = 30) {
-  const positions = [];
-  const normals = [];
-  const indices = [];
+  const positions = []
+  const normals = []
+  const indices = []
 
   for (let j = 0; j <= radialSegments; j++) {
     const theta = j * 2 * Math.PI / radialSegments;
@@ -229,18 +246,29 @@ function createTorusGeometry(outerRadius = 1, innerRadius = 0.4, radialSegments 
     }
   }
 
+  const uvs = new Float32Array([])
+
   return {
     positions: new Float32Array(positions),
     normals: new Float32Array(normals),
-    indices: new Uint16Array(indices)
+    indices: new Uint16Array(indices),
+    uvs
   };
 }
 /* ----- */
 
-export function createPlane(gl, size, position, rotation, color, textureImage) {
-  const bufferData = createPlaneGeometry(size)
-  return prepareBuffers(gl, bufferData)
+export function createPlane(gl, size, position, rotation, color, textureImage, textureMappings) {
+  const bufferData = createPlaneGeometry(size, position)
+  bufferData.baseColor = color
+  // textures - TODO
+  const outModel = prepareBuffers(gl, bufferData)
+  updateMapping(gl, outModel, textureMappings)
+  return outModel
 }
+
+/*export function updatePlane(gl, model, size, position, rotation, color, textureImage, textureMappings) {
+  return
+}*/
 
 export function createCube(gl, size, position, rotation, color, textureImage) {
   const bufferData = createCubeGeometry(size)

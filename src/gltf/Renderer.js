@@ -343,6 +343,11 @@ export class Renderer {
 
     const mvpMatrix = this.getViewProjectionMatrix(camera)
 
+    //this.prepareScene(scene)
+    for (const node of scene.nodes) {
+      this.renderNode(node, mvpMatrix)
+    }
+
     for (const light of scene.lights ?? []) {
       this.renderGeoNode(light, null, mvpMatrix)
     }
@@ -351,9 +356,6 @@ export class Renderer {
       this.renderGeoNode(geo, null, mvpMatrix)
     }
 
-    for (const node of scene.nodes) {
-      this.renderNode(node, mvpMatrix)
-    }
 
     //gl.bindBuffer(gl.ARRAY_BUFFER, null)
     //gl.useProgram(null)
