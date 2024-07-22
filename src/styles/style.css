@@ -19,7 +19,7 @@ html {
   height: 100%;
 }
 
-.miniscreen {
+/*.miniscreen {
   position: fixed;
   top: 10px;
   left: 10px;
@@ -30,15 +30,21 @@ html {
 #axesCanvas {
   width: inherit !important;
   height: inherit !important;
-}
+}*/
 
 .Logs {
   position: absolute;
   bottom: 1em;
   left: 1em;
+  display: flex;
+  flex-direction: column;
+  gap: .5em;
+  font-size: 1.2em;
+  /*text-shadow: 2px -3px 5px #696969a0;*/
 }
 
-/* Class for bg colors */
+/* dat.GUI CSS helpers */
+/* Class for bg colors of folders */
 .green {
   background-color: darkgreen !important;
 }
@@ -55,7 +61,7 @@ html {
   background-color: darkblue !important;
 }
 
-/* Class for centering action */
+/* Class for centering function action */
 li.cr.function.centered {
   text-align: center;
 }

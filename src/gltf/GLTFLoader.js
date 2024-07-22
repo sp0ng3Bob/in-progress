@@ -78,7 +78,6 @@ export class GLTFLoader {
     try {
       this.gltf = await this.fetchJson(url)
       this.defaultScene = this.gltf.scene || 0
-      this.defaultCamera = 0
       this.glbBuffers = null
     } catch (error) {
       console.error(error)
@@ -90,7 +89,6 @@ export class GLTFLoader {
       const data = await this.fetchBuffer(url)
       this.gltf = await this.parseGLB(data)
       this.defaultScene = this.gltf.scene || 0
-      this.defaultCamera = 0
     } catch (error) {
       console.error(error)
     }
@@ -119,6 +117,10 @@ export class GLTFLoader {
       if (chunkType === 0x4E4F534A) { // JSON
         const jsonText = new TextDecoder().decode(new Uint8Array(glb, offset, chunkLength))
         json = JSON.parse(jsonText)
+
+        if (json.asset.version != version) {
+          console.error("Header version and json version do not match!")
+        }
       } else if (chunkType === 0x004E4942) { // Binary
         binaryBuffer = glb.slice(offset, offset + chunkLength)
       }
@@ -189,7 +191,7 @@ export class GLTFLoader {
     return bufferView;
   }
 
-  loadSparseBuffer(nameOrIndex, sparseData) {
+  loadSparseBufferView(nameOrIndex, sparseData) {
     const gltfSpec = this.findByNameOrIndex(this.gltf.bufferViews, nameOrIndex);
     if (this.cache.has(gltfSpec)) {
       return this.cache.get(gltfSpec);
@@ -240,8 +242,9 @@ export class GLTFLoader {
 
       const ValuesArray = typedArrayConstructor[gltfSpec.componentType]
       let sparseData
+      let startingData
       if (gltfSpec.bufferView) {
-        let startingData = await this.loadBufferView(gltfSpec.bufferView)
+        startingData = await this.loadBufferView(gltfSpec.bufferView)
         sparseData = new ValuesArray(startingData.buffer, startingData.byteOffset, startingData.byteLength / ValuesArray.BYTES_PER_ELEMENT)
       } else {
         sparseData = new ValuesArray(byteLength)
@@ -253,18 +256,23 @@ export class GLTFLoader {
       const valuesData = new ValuesArray(valuesAccessor.buffer, valuesAccessor.byteOffset, valuesAccessor.byteLength / ValuesArray.BYTES_PER_ELEMENT)
 
       console.log("Sparse Accessor Debugging:");
-      console.log("Indices Data:", indicesData);
-      console.log("Values Data:", valuesData);
+      console.log("Initial sparse data:", sparseData);
+      //console.log("Indices Data:", indicesData);
+      //console.log("Values Data:", valuesData);
 
-      for (let i = 0; i < count; i++) { //indicesData.length; i++) {
+      for (let i = 0; i < count; i++) {
         const index = indicesData[i]
         const value = valuesData.subarray(i * type, (i + 1) * type)
-        console.log(`Setting value at index ${index}:`, value);
+        //console.log(`Setting value at index ${index}:`, value);
         sparseData.set(value, index * type);
       }
 
       console.log("Final Sparse Data:", sparseData);
-      bufferView = sparseData
+      //bufferView = sparseData
+      startingData.buffer = sparseData.buffer
+      bufferView = startingData
+
+      //bufferView = this.loadSparseBufferView(gltfSpec.bufferView, sparseData)
 
       /*bufferView = new BufferView({
         buffer: sparseData.buffer,

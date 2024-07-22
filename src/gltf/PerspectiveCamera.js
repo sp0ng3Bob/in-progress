@@ -9,9 +9,9 @@ export class PerspectiveCamera extends Camera {
   constructor(options = {}) {
     super(options)
 
-    this.aspect = options.aspect ?? 2.3
-    this.fov = options.fov ?? 1.7
-    this.near = options.near ?? 0.8
+    this.aspect = options.aspect ?? 1.618
+    this.fov = options.fov ?? (45 * Math.PI / 180)
+    this.near = options.near ?? 0.1
     this.far = options.far ?? Infinity
 
     this.updateMatrix()

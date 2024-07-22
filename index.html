@@ -40,6 +40,28 @@
 
 -->
 
+<!--
+The normal way to use WebGL:
+
+At init time
+  > for each shader program
+    1. create and compile vertex shader
+    2. create and compile fragment shader
+    3. create program, attach shaders, link program
+  > for each model
+    0. for each type of vertex data (positions, normal, color, texcoord
+    1. create a buffer
+    2. copy data to buffer
+  > create textures
+
+Then at render time
+  > for each model
+    1. use shader program appropriate for model
+    2. bind buffers, enable and setup attributes
+    3. bind textures and set uniforms
+    4. call drawArrays or drawElements
+-->
+
 <!DOCTYPE html>
 <html>
 
@@ -52,12 +74,12 @@
   <link rel="stylesheet" type="text/css" href="./src/styles/style.css">
 
   <script type="importmap">
-            {
-                "imports": {
-                    "glMatrix": "./src/lib/glMatrix/index.js"
-                }
-            }
-        </script>
+    {
+      "imports": {
+        "glMatrix": "./src/lib/glMatrix/index.js"
+      }
+    }
+  </script>
 
   <script type="module" src="./index.js"></script>
 </head>
@@ -67,14 +89,22 @@
     <canvas id="mainCanvas"></canvas>
   </div>
   <div class="Logs">
-    <span id="animationTime">0</span>
-    seconds
+    <span>
+      [CAMERA POSITION:
+      <span id="cameraPosition">X: 0, Y: 0, Z: 0</span>
+      ]
+    </span>
+    <span>
+      [CAMERA ROTATION:
+      <span id="cameraRotation">Pitch: 0°, Yaw: 0°, Roll: 0°</span>
+      ]
+    </span>
+    <span>
+      [ANIMATION TIME:
+      <span id="animationTime">0</span>
+      seconds]
+    </span>
   </div>
-  <!--
-		<div class="miniscreen">
-			<canvas id="axesCanvas"></canvas>
-		</div>
-	-->
 </body>
 
 </html>

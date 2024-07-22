@@ -88,8 +88,7 @@ void main() {
   //vNormal = (uMvpMatrix * aNormal).xyz;
   vTexCoord = aTexCoord;
   vTangent = aTangent;
-}
-`
+}`
 
 //https://registry.khronos.org/glTF/specs/2.0/glTF-2.0.html#appendix-b-brdf-implementation
 const fragment = `#version 300 es
@@ -225,7 +224,8 @@ vec4 baseColor = hasBaseColorTexture == 1 ? texture(uBaseColorTexture, vTexCoord
     float roughness = metallicRoughness.g;
 */
 
-    /*vec3 baseColor = uBaseColor.rgb; //vec3(1.0);
+    /*
+    vec3 baseColor = uBaseColor.rgb; //vec3(1.0);
     float baseAlpha = uBaseColor.a;
     float textureAlpha = 1.0;
     if (uHasBaseColorTexture == 1) {
@@ -235,7 +235,8 @@ vec4 baseColor = hasBaseColorTexture == 1 ? texture(uBaseColorTexture, vTexCoord
       baseColor = mix(baseColor, textureColor, 0.5);
     }
 
-    /*vec3 normal = normalize(vNormal);
+    /*
+    vec3 normal = normalize(vNormal);
     if (uHasNormalTexture == 1) {
         vec3 tangentNormal = texture(uNormalTexture, vTexCoord).xyz * 2.0 - 1.0;
         tangentNormal.xy *= uNormalTextureScale;
@@ -293,9 +294,12 @@ vec4 baseColor = hasBaseColorTexture == 1 ? texture(uBaseColorTexture, vTexCoord
     vec3 color = ambient + diffuse + specular + emissive;
     color = color * baseColor * occlusion;
     float combinedAlpha = mix(baseAlpha, textureAlpha, 0.5);
-    oColor = vec4(color, combinedAlpha);*/
-
-  vec4 albedo = texture(uTexture, vTexCoord);
+    oColor = vec4(color, combinedAlpha);
+*/
+  vec4 albedo = uBaseColor;
+  if (uHasBaseColorTexture == 1) {
+    albedo = mix(texture(uTexture, vTexCoord), uBaseColor, 0.2);
+  }
   vec3 normal = normalize(vNormal);
   
   // Lambertian reflection (diffuse reflection)
@@ -307,13 +311,15 @@ vec4 baseColor = hasBaseColorTexture == 1 ? texture(uBaseColorTexture, vTexCoord
     diffuse += uLightColors[i] * uDiffuseColor[i] * lambertian + uAmbientalColor[i];
   }
   
-  if (uBaseColor != vec4(1.0)) {
+  /*if (uBaseColor != vec4(1.0)) {
     vec3 finalColor = mix(albedo.rgb, uBaseColor.rgb, 0.2) * diffuse;
     oColor = vec4(finalColor, mix(albedo.a, uBaseColor.a, 0.2));
   } else {
     vec3 finalColor = albedo.rgb * diffuse;
     oColor = vec4(finalColor, albedo.a); 
-  }
+  }*/
+  vec3 finalColor = albedo.rgb * diffuse;
+  oColor = vec4(finalColor, albedo.a);
   
   
   
@@ -347,55 +353,53 @@ vec4 baseColor = hasBaseColorTexture == 1 ? texture(uBaseColorTexture, vTexCoord
   //oColor = vec4(normal, 1);
 }`
 
-/* const fragment = `#version 300 es
-precision mediump float
-precision mediump int
+const simpleVertex = `#version 300 es
+precision mediump float;
 
-uniform sampler2D uTexture
+layout (location = 0) in vec3 aPosition;
+layout (location = 1) in vec2 aTexCoord;
 
-uniform sampler2D uNormalTexture
-uniform float uNormalTextureScale
+uniform mat4 uMvpMatrix;
 
-uniform sampler2D uEmissiveTexture
-uniform vec3 uEmissiveFactor
-
-uniform sampler2D uMetallicRoughnessTexture
-uniform float uMetallicFactor
-uniform float uRoughnessFactor
-
-uniform sampler2D uOcclusionTexture
-uniform float uOcclusionStrength
-
-// LIGHTS
-//uniform int uNumberOfLights
-uniform vec3 uLightPositions[4] //uNumberOfLights]
-uniform vec3 uLightColors[4] //uNumberOfLights]
-//uniform vec3 uDiffuseColor = vec3(200, 200, 180)
-uniform vec3 uSpecularColor  // Material specular color
-uniform float uShininess  // Material shininess
-
-in vec3 vNormal
-in vec2 vTexCoord
-in vec4 vTangent
-
-out vec4 oColor
+out vec3 vNormal;
+out vec2 vTexCoord;
 
 void main() {
-  //vec3 uDiffuseColor = vec3(200, 200, 180)
-  //vec4 albedo = texture(uTexture, vTexCoord)
-  //vec3 normal = normalize(vNormal)
+  gl_Position = uMvpMatrix * vec4(aPosition, 1.0);
+  vTexCoord = aTexCoord;
+}`
+
+const simpleFragment = `#version 300 es
+precision mediump float;
+
+uniform sampler2D uTexture;
+
+// LIGHTS
+//uniform int uNumberOfLights;
+//uniform vec3 uLightPositions[4]; //uNumberOfLights]
+//uniform vec3 uLightColors[4]; //uNumberOfLights]
+//uniform vec3 uDiffuseColor; = vec3(200, 200, 180)
+//uniform vec3 uSpecularColor;  // Material specular color
+//uniform float uShininess;  // Material shininess
+
+in vec2 vTexCoord;
+
+out vec4 oColor;
+
+void main() {
+  vec4 albedo = texture(uTexture, vTexCoord);
 
   // Lambertian reflection (diffuse reflection)
-  /*vec3 diffuse = vec3(0.0)
+  vec3 diffuse = vec3(0.0);
 
-  for (int i = 0 i < 2 i++) {
-    vec3 lightDir = normalize(uLightPositions[i] - vec3(vTexCoord, 0.0))
-    float lambertian = max(dot(normal, lightDir), 0.0)
-    diffuse += uLightColors[i] * uDiffuseColor * lambertian
-  }
+  /*for (int i = 0; i < 2; i++) {
+    vec3 lightDir = normalize(uLightPositions[i] - vec3(vTexCoord, 0.0));
+    float lambertian = max(dot(normal, lightDir), 0.0);
+    diffuse += uLightColors[i] * uDiffuseColor * lambertian;
+  }*/
 
-  vec3 finalColor = albedo.rgb * diffuse
-  oColor = vec4(finalColor, albedo.a)
+  vec3 finalColor = albedo.rgb * diffuse;
+  oColor = vec4(finalColor, albedo.a);
 
 
 
@@ -404,7 +408,7 @@ void main() {
   /*vec3 viewDir = normalize(vNormal - vec3(vTexCoord, 0.0)) //normalize(normal - vec3(vTexCoord, 0.0))
   vec3 resultColor = vec3(0.0)
 
-  for (int i = 0 i < 2 i++) {
+  for (int i = 0; i < 2; i++) {
     vec3 lightDir = normalize(uLightPositions[i] - vec3(vTexCoord, 0.0))
     vec3 reflectDir = reflect(-lightDir, normal)
 
@@ -421,13 +425,8 @@ void main() {
 
   vec3 finalColor = albedo.rgb * resultColor
   finalColor = mix(albedo.rgb, uSpecularColor)
-  oColor = vec4(finalColor, albedo.a)
-
-
-  
-  //oColor = texture(uTexture, vTexCoord)
-  oColor = texture(uNormalTexture, vTexCoord)
-}` */
+  oColor = vec4(finalColor, albedo.a)*/
+}`
 
 const axesVert = `#version 300 es
 precision mediump float;
@@ -448,6 +447,7 @@ void main() {
 }`
 
 export const shaders = {
-  simple: { vertex, fragment },
-  axes: { vertex: axesVert, fragment: axesFrag }
+  axes: { vertex: axesVert, fragment: axesFrag },
+  simple: { vertex: simpleVertex, fragment: simpleFragment },
+  pbr: { vertex, fragment }
 }
