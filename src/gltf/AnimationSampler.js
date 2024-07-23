@@ -11,22 +11,38 @@ export class AnimationSampler {
     this.input = this.getAccessorData(options.input)
     this.output = this.getAccessorData(options.output)
     this.interpolation = options.interpolation ?? 'LINEAR'
+    this.setUpRandomShiet()
   }
 
   getAccessorData(accessor) {
     return new Float32Array(accessor.bufferView.buffer, accessor.bufferView.byteOffset + accessor.byteOffset, accessor.count * accessor.numComponents)
   }
 
-  getStartingPosition() {
-    let position
+  setUpRandomShiet() {
     if (this.path == "rotation") {
-      position = quat.fromValues(this.output.at(-4), this.output.at(-3), this.output.at(-2), this.output.at(-1))
-    } else if (this.path == "weights") { //maybe just float by float...?
-      position = vec2.fromValues(this.output.at(-2), this.output.at(-1))
+      this.csbs = 4
+      this.dim = quat
+    } else if (this.path == "weights") {
+      this.csbs = 2
+      this.dim = vec2 //float...????
     } else {
-      position = vec3.fromValues(this.output.at(-3), this.output.at(-2), this.output.at(-1))
+      this.csbs = 3
+      this.dim = vec3
     }
-    return position
+
+    if (this.interpolation != "CUBICSPLINE") {
+      this.csbs = 0 //cubicSplineBufferStride .. or something.. to long tho
+    }
+  }
+
+  getStartingPosition() {
+    if (this.path == "rotation") {
+      return quat.fromValues(this.output.at(-4 - this.csbs), this.output.at(-3 - this.csbs), this.output.at(-2 - this.csbs), this.output.at(-1 - this.csbs))
+    } else if (this.path == "weights") { //maybe just float by float...?
+      return vec2.fromValues(this.output.at(-2 - this.csbs), this.output.at(-1 - this.csbs))
+    } else {
+      return vec3.fromValues(this.output.at(-3 - this.csbs), this.output.at(-2 - this.csbs), this.output.at(-1 - this.csbs))
+    }
   }
 
   //https://registry.khronos.org/glTF/specs/2.0/glTF-2.0.html#appendix-c-interpolation
@@ -35,74 +51,55 @@ export class AnimationSampler {
     const nextKeyframe = this.input[i]
     const deltaTime = nextKeyframe - previousKeyframe
     const t = (time - previousKeyframe) / deltaTime
-    let csbs = 0 //cubicSplineBufferStride .. or something.. to long tho
-    let cubeSplineData = []
 
+    let cubeSplineData = []
     if (this.interpolation == "CUBICSPLINE") {
       //the input tangent of the first keyframe and the output tangent of the last keyframe are totally ignored
       let aTangent, bTangent
       if (this.path == "rotation") {
-        csbs = 4
-        aTangent = quat.fromValues(this.output[(i - 1) * 4 + csbs * 2], this.output[(i - 1) * 4 + 1 + csbs * 2], this.output[(i - 1) * 4 + 2 + csbs * 2], this.output[(i - 1) * 4 + 3 + csbs * 2]) //The output tangent direction of previousTime keyframe
+        aTangent = quat.fromValues(this.output[(i - 1) * 4 + this.csbs * 2], this.output[(i - 1) * 4 + 1 + this.csbs * 2], this.output[(i - 1) * 4 + 2 + this.csbs * 2], this.output[(i - 1) * 4 + 3 + this.csbs * 2]) //The output tangent direction of previousTime keyframe
         bTangent = quat.fromValues(this.output[i * 4], this.output[i * 4 + 1], this.output[i * 4 + 2], this.output[i * 4 + 3]) //The input tangent direction of nextTime keyframe
-        quat.scale(aTangent, aTangent, deltaTime)
-        quat.scale(bTangent, bTangent, deltaTime)
       } else if (this.path == "weights") {
-        csbs = 2
-        aTangent = vec2.fromValues(this.output[(i - 1) * 2 + csbs * 2], this.output[(i - 1) * 2 + 1 + csbs * 2])
+        aTangent = vec2.fromValues(this.output[(i - 1) * 2 + this.csbs * 2], this.output[(i - 1) * 2 + 1 + this.csbs * 2])
         bTangent = vec2.fromValues(this.output[i * 2], this.output[i * 2 + 1])
-        vec2.scale(aTangent, aTangent, deltaTime)
-        vec2.scale(bTangent, bTangent, deltaTime)
       } else {
-        csbs = 3
-        aTangent = vec3.fromValues(this.output[(i - 1) * 3 + csbs * 2], this.output[(i - 1) * 3 + 1 + csbs * 2], this.output[(i - 1) * 3 + 2 + csbs * 2])
+        aTangent = vec3.fromValues(this.output[(i - 1) * 3 + this.csbs * 2], this.output[(i - 1) * 3 + 1 + this.csbs * 2], this.output[(i - 1) * 3 + 2 + this.csbs * 2])
         bTangent = vec3.fromValues(this.output[i * 3], this.output[i * 3 + 1], this.output[i * 3 + 2])
-        vec3.scale(aTangent, aTangent, deltaTime)
-        vec3.scale(bTangent, bTangent, deltaTime)
       }
+      this.dim.scale(aTangent, aTangent, deltaTime)
+      this.dim.scale(bTangent, bTangent, deltaTime)
       cubeSplineData.push(aTangent, bTangent)
     }
 
     let a, b
     if (this.path == "rotation") {
-      a = quat.fromValues(this.output[(i - 1) * 4 + csbs], this.output[(i - 1) * 4 + 1 + csbs], this.output[(i - 1) * 4 + 2 + csbs], this.output[(i - 1) * 4 + 3 + csbs])
-      b = quat.fromValues(this.output[i * 4 + csbs], this.output[i * 4 + 1 + csbs], this.output[i * 4 + 2 + csbs], this.output[i * 4 + 3 + csbs])
+      a = quat.fromValues(this.output[(i - 1) * 4 + this.csbs], this.output[(i - 1) * 4 + 1 + this.csbs], this.output[(i - 1) * 4 + 2 + this.csbs], this.output[(i - 1) * 4 + 3 + this.csbs])
+      b = quat.fromValues(this.output[i * 4 + this.csbs], this.output[i * 4 + 1 + this.csbs], this.output[i * 4 + 2 + this.csbs], this.output[i * 4 + 3 + this.csbs])
     } else if (this.path == "weights") {
-      a = vec2.fromValues(this.output[(i - 1) * 2 + csbs], this.output[(i - 1) * 2 + 1 + csbs])
-      b = vec2.fromValues(this.output[i * 2 + csbs], this.output[i * 2 + 1 + csbs])
+      a = vec2.fromValues(this.output[(i - 1) * 2 + this.csbs], this.output[(i - 1) * 2 + 1 + this.csbs])
+      b = vec2.fromValues(this.output[i * 2 + this.csbs], this.output[i * 2 + 1 + this.csbs])
     } else {
-      a = vec3.fromValues(this.output[(i - 1) * 3 + csbs], this.output[(i - 1) * 3 + 1 + csbs], this.output[(i - 1) * 3 + 2 + csbs])
-      b = vec3.fromValues(this.output[i * 3 + csbs], this.output[i * 3 + 1 + csbs], this.output[i * 3 + 2 + csbs])
+      a = vec3.fromValues(this.output[(i - 1) * 3 + this.csbs], this.output[(i - 1) * 3 + 1 + this.csbs], this.output[(i - 1) * 3 + 2 + this.csbs])
+      b = vec3.fromValues(this.output[i * 3 + this.csbs], this.output[i * 3 + 1 + this.csbs], this.output[i * 3 + 2 + this.csbs])
     }
 
-    return this.interpolateValue(a, b, t, a.length, cubeSplineData)
+    return this.interpolateValue(a, b, t, cubeSplineData)
   }
 
   //https://github.com/KhronosGroup/glTF-Tutorials/blob/main/gltfTutorial/gltfTutorial_007_Animations.md
-  interpolateValue(a, b, t, dimensions, cubeSplineData) {
+  interpolateValue(a, b, t, cubeSplineData) {
     switch (this.interpolation) {
       case "STEP":
         return a
       case "LINEAR":
-        if (dimensions == 4) { //rotation -> quaternions
+        if (this.dim == quat) { //rotation -> quaternions
           return this.slerp(a, b, t)
-        } else if (dimensions == 2) {
-          const ba = vec2.subtract(vec2.create(), b, a)
-          const t_ba = vec2.scale(vec2.create(), ba, t)
-          return vec2.add(vec2.create(), a, t_ba)
-        } else {
-          const ba = vec3.subtract(vec3.create(), b, a)
-          const t_ba = vec3.scale(vec3.create(), ba, t)
-          return vec3.add(vec3.create(), a, t_ba)
         }
+        const ba = this.dim.subtract(this.dim.create(), b, a)
+        const t_ba = this.dim.scale(this.dim.create(), ba, t)
+        return this.dim.add(this.dim.create(), a, t_ba)
       case "CUBICSPLINE":
-        if (dimensions == 4) { //rotation -> quaternions
-          return this.cubicSpline(a, b, ...cubeSplineData, t, quat)
-        } else if (dimensions == 2) {
-          return this.cubicSpline(a, b, ...cubeSplineData, t, vec2)
-        } else {
-          return this.cubicSpline(a, b, ...cubeSplineData, t, vec3)
-        }
+        return this.cubicSpline(a, b, ...cubeSplineData, t)
     }
   }
 
@@ -138,7 +135,7 @@ export class AnimationSampler {
     return quat.add(quat.create(), scaledA, scaledB)
   }
 
-  cubicSpline(a, b, aTangent, bTangent, t, dim) {
+  cubicSpline(a, b, aTangent, bTangent, t) {
     /*
     These tangent are stored in the animation channel. For each keyframe described by the animation sampler, the animation channel contains 3 elements :
           The input tangent of the keyframe
@@ -166,20 +163,20 @@ export class AnimationSampler {
             */
     const t2 = t * t
     const t3 = t2 * t
-    const term1 = dim.create();
-    const term2 = dim.create();
-    const term3 = dim.create();
-    const term4 = dim.create();
-    const res = dim.create();
+    const term1 = this.dim.create();
+    const term2 = this.dim.create();
+    const term3 = this.dim.create();
+    const term4 = this.dim.create();
+    const res = this.dim.create();
 
-    dim.scale(term1, a, (2 * t3 - 3 * t2 + 1));
-    dim.scale(term2, aTangent, (t3 - 2 * t2 + t));
-    dim.scale(term3, b, (-2 * t3 + 3 * t2));
-    dim.scale(term4, bTangent, (t3 - t2));
+    this.dim.scale(term1, a, (2 * t3 - 3 * t2 + 1));
+    this.dim.scale(term2, aTangent, (t3 - 2 * t2 + t));
+    this.dim.scale(term3, b, (-2 * t3 + 3 * t2));
+    this.dim.scale(term4, bTangent, (t3 - t2));
 
-    dim.add(res, term1, term2);
-    dim.add(res, res, term3);
-    dim.add(res, res, term4);
+    this.dim.add(res, term1, term2);
+    this.dim.add(res, res, term3);
+    this.dim.add(res, res, term4);
     return res
   }
 }
