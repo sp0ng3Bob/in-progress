@@ -29,10 +29,10 @@ function createAndBindBuffer(gl, data, attribute = undefined, target = undefined
 }
 
 function setUpVertexAttribute(gl, attribute, size) {
+  gl.enableVertexAttribArray(attribute)
   gl.vertexAttribPointer(
     attribute,
-    size, gl.FLOAT, false, 0, 0);
-  gl.enableVertexAttribArray(attribute);
+    size, gl.FLOAT, false, 0, 0)
 }
 
 function prepareBuffers(gl, program, bufferData) {
