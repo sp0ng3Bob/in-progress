@@ -458,9 +458,9 @@ export class GLTFLoader {
     } else if (gltfSpec.type === 'orthographic') {
       const ortho = gltfSpec.orthographic;
       const camera = new OrthographicCamera({
-        left: -ortho.xmag,
+        //left: -ortho.xmag,
         right: ortho.xmag,
-        bottom: -ortho.ymag,
+        //bottom: -ortho.ymag,
         top: ortho.ymag,
         near: ortho.znear,
         far: ortho.zfar,

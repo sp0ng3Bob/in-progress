@@ -183,7 +183,7 @@ export class App extends Application {
 
     //put the light and the procgeo sphere in the same object - TODO
     this.state.lightsList.push(new PointLight({ position: "-0.6, 0.1, 0", color: [255, 120, 120], type: "" }))
-    globalLightsList.push(Geo.createSphere(this.gl, this.renderer.programs.pbr, 0.01, [-0.6, 0.1, 0], "rotation?!", [255, 120, 120], "./src/models/1Avocado/glTF/Avocado_baseColor.png"))
+    globalLightsList.push(Geo.createSphere(this.gl, this.renderer.programs.pbr, 0.01, [-0.6, 0.1, 0], undefined, [255, 120, 120], "./src/models/1Avocado/glTF/Avocado_baseColor.png"))
 
     this.state.lightsList.push(new PointLight({ position: "-0.3, 0.1, 0", color: [100, 255, 100], type: "" }))
     //globalLightsList.push(Geo.createSphere(this.gl, 0.1, [-0.3, 0.1, 0], "rotation?!", [100, 255, 100], "./src/models/1Avocado/glTF/Avocado_baseColor.png"))

@@ -1,18 +1,22 @@
-//const mat4 = require('gl-matrix/mat4')
-//import from "../libs/gl-matrix.min.js"
-
-// proceduralGeometry.js
-
 import { WebGL } from "../engine/WebGL.js"
 import { getNormalisedRGB } from "./PointLight.js"
 import { updateMapping } from "./Textures.js"
 import glMatrix from "glMatrix"
 
+const vec3 = glMatrix.vec3
 const mat4 = glMatrix.mat4
+//const quat = glMatrix.quat
 
 //export const geometryObjects = [] // Initialize an array to store objects
 
 /* Private helpers */
+function enableAndSetUpVertexAttribute(gl, attribute, size) {
+  gl.enableVertexAttribArray(attribute)
+  gl.vertexAttribPointer(
+    attribute,
+    size, gl.FLOAT, false, 0, 0)
+}
+
 function createAndBindBuffer(gl, data, attribute = undefined, target = undefined, usage = undefined) {
   target = target ?? gl.ARRAY_BUFFER
   usage = usage ?? gl.STATIC_DRAW
@@ -23,16 +27,9 @@ function createAndBindBuffer(gl, data, attribute = undefined, target = undefined
     gl.bufferData(target, data, usage);
   }
   if (attribute) {
-    setUpVertexAttribute(gl, ...Object.values(attribute))
+    enableAndSetUpVertexAttribute(gl, ...Object.values(attribute))
   }
   return buffer;
-}
-
-function setUpVertexAttribute(gl, attribute, size) {
-  gl.enableVertexAttribArray(attribute)
-  gl.vertexAttribPointer(
-    attribute,
-    size, gl.FLOAT, false, 0, 0)
 }
 
 function prepareBuffers(gl, program, bufferData) {
@@ -48,25 +45,43 @@ function prepareBuffers(gl, program, bufferData) {
 
   //also textures..
 
-  //gl.bindVertexArray(null)
   return { //positions, normals and indices not really needed...
     //positions: positionBuffer,
     //normals: normalBuffer,
     //indices: indexBuffer,
+    //uvs: uvBuffer,
     indexCount: indices.length,
-    uvs: uvBuffer,
     vao,
-    //sampler
+    //sampler,
+    //texture
   };
 }
 
-function createPlaneGeometry(size = 1, position, rotation) {
+function applyTransformations(positions, T, R) {
+  const transformMatrix = mat4.create();
+  mat4.translate(transformMatrix, transformMatrix, T);
+
+  const rotationMatrix = mat4.create();
+  mat4.fromQuat(rotationMatrix, R);
+  mat4.multiply(transformMatrix, transformMatrix, rotationMatrix); //rotationMatrix, transformMatrix
+
+  const transformedPositions = [];
+  for (let i = 0; i < positions.length; i += 3) {
+    const vertex = vec3.fromValues(positions[i], positions[i + 1], positions[i + 2]);
+    vec3.transformMat4(vertex, vertex, transformMatrix);
+    transformedPositions.push(vertex[0], vertex[1], vertex[2]);
+  }
+
+  return new Float32Array(transformedPositions);
+}
+
+function createPlaneGeometry(size = 1, position = [0, 0, 0], rotation = [0, 0, 0, 1]) {
   const halfSize = size / 2;
-  const positions = new Float32Array([
-    -halfSize + position[0], position[1], halfSize + position[2], // top-left
-    halfSize + position[0], position[1], halfSize + position[2],  // top-right
-    halfSize + position[0], position[1], -halfSize + position[2], // bottom-right
-    -halfSize + position[0], position[1], -halfSize + position[2] // bottom-left
+  let positions = new Float32Array([
+    -halfSize, 0, halfSize,  // top-left
+    halfSize, 0, halfSize,  // top-right
+    halfSize, 0, -halfSize,  // bottom-right
+    -halfSize, 0, -halfSize   // bottom-left
   ]);
 
   const normals = new Float32Array([
@@ -88,10 +103,12 @@ function createPlaneGeometry(size = 1, position, rotation) {
     0, 0  // bottom-left
   ]);
 
+  positions = applyTransformations(positions, position, rotation)
+
   return { positions, normals, indices, uvs };
 }
 
-function createCubeGeometry(size = 1, position, rotation) {
+function createCubeGeometry(size = 1, position = [0, 0, 0], rotation = [0, 0, 0, 1]) {
   const halfSize = size / 2;
   const faceDefinitions = [
     [-1, -1, 1, 1, -1, 1, 1, 1, 1, -1, 1, 1],     // Front face
@@ -102,14 +119,14 @@ function createCubeGeometry(size = 1, position, rotation) {
     [-1, -1, -1, -1, -1, 1, -1, 1, 1, -1, 1, -1]  // Left face
   ];
 
-  const positions = [];
+  let positions = [];
   const normals = [];
 
   faceDefinitions.forEach((face, faceIndex) => {
     for (let i = 0; i < 4; i++) {
-      const x = halfSize * face[3 * i] + position[0];
-      const y = halfSize * face[3 * i + 1] + position[1];
-      const z = halfSize * face[3 * i + 2] + position[2];
+      const x = halfSize * face[3 * i] //+ position[0];
+      const y = halfSize * face[3 * i + 1] //+ position[1];
+      const z = halfSize * face[3 * i + 2] //+ position[2];
       positions.push(x, y, z);
     }
 
@@ -132,8 +149,10 @@ function createCubeGeometry(size = 1, position, rotation) {
 
   const uvs = new Float32Array([])
 
+  positions = applyTransformations(positions, position, rotation)
+
   return {
-    positions: new Float32Array(positions),
+    positions,
     normals: new Float32Array(normals),
     indices,
     uvs
@@ -229,8 +248,8 @@ function createCubeGeometry(size = 1, position, rotation) {
   return { positions, normals, indices, uvs };*/
 }
 
-function createSphereGeometry(radius = 1, position, rotation, latBands = 30, longBands = 30) {
-  const positions = [];
+function createSphereGeometry(radius = 1, position = [0, 0, 0], rotation = [0, 0, 0, 1], latBands = 30, longBands = 30) {
+  let positions = [];
   const normals = [];
   const indices = [];
 
@@ -248,7 +267,8 @@ function createSphereGeometry(radius = 1, position, rotation, latBands = 30, lon
       const y = cosTheta;
       const z = sinPhi * sinTheta;
 
-      positions.push(radius * x + position[0], radius * y + position[1], radius * z + position[2]);
+      //positions.push(radius * x + position[0], radius * y + position[1], radius * z + position[2]);
+      positions.push(radius * x, radius * y, radius * z);
       normals.push(x, y, z);
     }
   }
@@ -265,16 +285,18 @@ function createSphereGeometry(radius = 1, position, rotation, latBands = 30, lon
 
   const uvs = new Float32Array([])
 
+  positions = applyTransformations(positions, position, rotation)
+
   return {
-    positions: new Float32Array(positions),
+    positions,
     normals: new Float32Array(normals),
     indices: new Uint16Array(indices),
     uvs
   };
 }
 
-function createTorusGeometry(outerRadius = 1, innerRadius = 0.4, position, rotation, radialSegments = 30, tubularSegments = 30) {
-  const positions = []
+function createTorusGeometry(outerRadius = 1, innerRadius = 0.4, position = [0, 0, 0], rotation = [0, 0, 0, 1], radialSegments = 30, tubularSegments = 30) {
+  let positions = []
   const normals = []
   const indices = []
 
@@ -315,8 +337,10 @@ function createTorusGeometry(outerRadius = 1, innerRadius = 0.4, position, rotat
 
   const uvs = new Float32Array([])
 
+  positions = applyTransformations(positions, position, rotation)
+
   return {
-    positions: new Float32Array(positions),
+    positions,
     normals: new Float32Array(normals),
     indices: new Uint16Array(indices),
     uvs
