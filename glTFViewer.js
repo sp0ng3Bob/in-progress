@@ -136,9 +136,9 @@ export class App extends Application {
         shape: 0, //"Plane",
         size: 1,
         position: "0, 0, 0",
-        rotation: "lol",
+        rotation: "0, 0, 0, 1",
         color: [127, 127, 255],
-        texture: "",
+        texture: "./src/models/1Avocado/glTF/Avocado_baseColor.png",
         textureMapping: {
           mapping: 'UV',
           translateX: 0,
@@ -778,7 +778,7 @@ export class App extends Application {
       aspect: this.canvas.clientWidth / this.canvas.clientHeight,
       fov: fov,
       near: 0.01, //maxModelSize / 20,
-      //far    : maxModelSize*200
+      far: maxModelSize * 50
     })
     const vpMatrix = mat4.create()
     /*const camInverted = mat4.create()
@@ -807,7 +807,7 @@ export class App extends Application {
 
     // delete this or fix it ?!?!?!?!?!?!?!?!?!*!*?!*?*!?*!?*!*?!*!?*?!?*!?*!*!*?!*?!*?!*!?*!?*!?!*?!*!?*?!*?!*?*!?*!
     this.cameras[this.freeCamera].translation = [...this.state.eye] //this.state.eye[2]
-    this.cameras[this.freeCamera].translation[2] = modelSizeZ == 0 ? 1.4 : modelSizeZ * 3 //this.state.eye[2]
+    this.cameras[this.freeCamera].translation[2] = modelSizeZ == 0 ? 1.4 : modelSizeZ * 2 //this.state.eye[2]
     this.cameras[this.freeCamera].updateMatrix()
     //*?!*?!*!?*!?*!?!*!?*!?!*?!!*?!*!?!*?!*!?*!?!*?!*!?*!?!*!?*!?!*!?!*?! wtf ??
   }
@@ -816,7 +816,7 @@ export class App extends Application {
     const viewMatrix = mat4.create()
     mat4.lookAt(viewMatrix, [0, 1, 5], [0, 0, 0], [0, 1, 0])
     const freeCamera = new PerspectiveCamera({
-      aspect: this.canvas.clientWidth / this.canvas.clientHeight
+      //aspect: this.canvas.clientWidth / this.canvas.clientHeight
     })
     const vpMatrix = mat4.create()
     mat4.multiply(vpMatrix, freeCamera.matrix, viewMatrix)

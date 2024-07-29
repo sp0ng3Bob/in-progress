@@ -361,7 +361,6 @@ layout (location = 1) in vec2 aTexCoord;
 
 uniform mat4 uMvpMatrix;
 
-out vec3 vNormal;
 out vec2 vTexCoord;
 
 void main() {

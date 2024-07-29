@@ -20,9 +20,9 @@ export class PerspectiveCamera extends Camera {
   }
 
   updateMatrix() {
-    /*mat4.perspective(this.matrix,
+    mat4.perspective(this.matrix,
       this.fov, this.aspect,
-      this.near, this.far)*/
+      this.near, this.far)
 
     /*
       a be the aspect ratio (width over height) of the field of view, set by camera.perspective.aspectRatio, or the aspect ratio of the viewport;
@@ -30,7 +30,7 @@ export class PerspectiveCamera extends Camera {
       n be the distance to the near clipping plane, set by camera.perspective.znear.
       f be the distance to the far clipping plane, set by camera.perspective.zfar;
     */
-    const perspective = mat4.create()
+    /*const perspective = mat4.create()
     const a = this.aspect
     const y = this.fov // yFov ..???
     const n = this.near
@@ -49,6 +49,6 @@ export class PerspectiveCamera extends Camera {
       perspective[11] = (2 * f * n) / (n - f)
     }
 
-    this.matrix = perspective
+    this.matrix = perspective*/
   }
 }

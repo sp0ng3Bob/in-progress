@@ -94,10 +94,10 @@ export function updateMapping(gl, model, options) {
       uvs = calculateSphericalMapping(model.positions);
       break;
     default:
-      uvs = getUVFromGeoModel(model);
+      uvs = model.uvs //getUVFromGeoModel(model);
       break;
   }
-  return updateUVs(gl, model, uvs);
+  return uvs //updateUVs(gl, model, uvs);
 }
 
 function updateUVs(gl, model, options) {
@@ -107,4 +107,13 @@ function updateUVs(gl, model, options) {
   uvs = scaleUVs(uvs, options.scaleX, options.scaleY);
   setUVBuffer(gl, model, uvs);
   //return uvs
+}
+
+export function fetchImage(url) {
+  return new Promise((resolve, reject) => {
+    const image = new Image();
+    image.addEventListener('load', e => resolve(image));
+    image.addEventListener('error', reject);
+    image.src = url;
+  });
 }
