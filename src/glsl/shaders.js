@@ -43,10 +43,10 @@ void main() {
   //vec3 tangent = aTangent.xyz
 
   // Apply morph targets
-  if (uMorphTargetWeight0 < 0.0) {
+  if (uMorphTargetWeight0 > 0.0) {
     position += aPositionTarget0 * uMorphTargetWeight0;
 
-    if (uMorphTargetWeight1 < 0.0) {
+    if (uMorphTargetWeight1 > 0.0) {
       position += aPositionTarget1 * uMorphTargetWeight1;
     }
   }

@@ -45,12 +45,28 @@ export class AnimationSampler {
     if (this.interpolation != "CUBICSPLINE") {
       this.csbs = 0 //cubicSplineBufferStride .. or something.. to long tho
     } else {
+      //When used with CUBICSPLINE interpolation, tangents (ak, bk) and values (vk) are grouped within keyframes:
+      //a1, a2,…​an, v1, v2,…​vn, b1, b2,…​bn
       const size = this.input.length
-      const firtsThird = size * this.csbs
+      /*const firtsThird = size * this.csbs
       const secondThird = firtsThird * 2
       this.aTangents = this.output.slice(0, firtsThird)
       this.bTangents = this.output.slice(secondThird)
-      this.output = this.output.slice(firtsThird, secondThird)
+      this.output = this.output.slice(firtsThird, secondThird)*/
+
+      this.aTangents = new Float32Array(size * this.csbs);
+      this.bTangents = new Float32Array(size * this.csbs);
+      let values = new Float32Array(size * this.csbs);
+
+      for (let i = 0; i < size; i++) {
+        for (let j = 0; j < this.csbs; j++) {
+          this.aTangents[i * this.csbs + j] = this.output[(i * 3 * this.csbs) + j];
+          values[i * this.csbs + j] = this.output[(i * 3 * this.csbs) + this.csbs + j];
+          this.bTangents[i * this.csbs + j] = this.output[(i * 3 * this.csbs) + (2 * this.csbs) + j];
+        }
+      }
+
+      this.output = values
     }
   }
 
@@ -65,17 +81,8 @@ export class AnimationSampler {
   }
 
   getStartingPosition() {
-    /*if (this.interpolation == "CUBICSPLINE") {
-      if (this.path == "rotation") {
-        return quat.fromValues(this.aTangents[0], this.aTangents[1], this.aTangents[2], this.aTangents[3]) //(this.output.at(-4), this.output.at(-3), this.output.at(-2), this.output.at(-1))
-      } else if (this.path == "weights") {
-        return this.aTangents[0]
-      } else {
-        return vec3.fromValues(this.aTangents[0], this.aTangents[1], this.aTangents[2]) //(this.output.at(-3), this.output.at(-2), this.output.at(-1))
-      }
-    }*/
-
     if (this.path == "rotation") {
+      //maybe normalise it also?
       return quat.fromValues(this.output[0], this.output[1], this.output[2], this.output[3]) //(this.output.at(-4), this.output.at(-3), this.output.at(-2), this.output.at(-1))
     } else if (this.path == "weights") {
       return this.output[0]
@@ -90,7 +97,7 @@ export class AnimationSampler {
     const nextKeyframe = this.input[i]
     const deltaTime = nextKeyframe - previousKeyframe
     let t = (time - previousKeyframe) / deltaTime
-    t = t > 0 ? t : 0
+    //t = t > 0 ? t : 0
 
     const cubeSplineData = []
     if (this.interpolation == "CUBICSPLINE") {
@@ -115,10 +122,10 @@ export class AnimationSampler {
 
     let a, b
     if (this.path == "weights") {
-      a = this.output[(i - 1) + this.csbs]
-      b = this.output[i + this.csbs]
+      a = this.output[(i - 1)] // + this.csbs]
+      b = this.output[i] // + this.csbs]
     } else {
-      const [ax, bx] = this.extractValue(i, this.output, this.output, this.csbs)
+      const [ax, bx] = this.extractValue(i, this.output, this.output) //, this.csbs)
       a = this.dim.fromValues(...ax)
       b = this.dim.fromValues(...bx)
     }
@@ -149,6 +156,8 @@ export class AnimationSampler {
           This can be achieved by ensuring that a != −b for all keyframes.
         */
         if (this.dim === quat) {
+          //quat.normalize(a, a)
+          //quat.normalize(b, b)
           let out = this.cubicSpline(a, b, ...cubeSplineData, t)
           out = out.every(item => item === 0) ? quat.create() : out
           quat.normalize(out, out)
@@ -159,6 +168,8 @@ export class AnimationSampler {
   }
 
   slerp(a, b, t) {
+    //quat.normalize(a, a)
+    //quat.normalize(b, b)
     const dotProduct = quat.dot(a, b)
     const arc = Math.acos(Math.abs(dotProduct))
     const s = Math.sign(dotProduct) // dotProduct/Math.abs(dotProduct)
@@ -209,31 +220,30 @@ export class AnimationSampler {
             
     return (2 * t3 - 3 * t2 + 1) * a + (t3 - 2 * t2 + t) * aTangent + (-2 * t3 + 3 * t2) * b + (t3 - t2) * bTangent
             */
+    const t2 = t * t
+    const t3 = t2 * t
+    const term1 = (2 * t3 - 3 * t2 + 1)
+    const term2 = td * (t3 - 2 * t2 + t)
+    const term3 = (-2 * t3 + 3 * t2)
+    const term4 = td * (t3 - t2)
+
     if (this.dim === 1) {
-      const t2 = t * t
-      const t3 = t2 * t
-      const term1 = (2 * t3 - 3 * t2 + 1) * a
-      const term2 = td * (t3 - 2 * t2 + t) * aOutTangent
-      const term3 = (-2 * t3 + 3 * t2) * b
-      const term4 = td * (t3 - t2) * bInTangent
-      return term1 + term2 + term3 + term4
+      return term1 * a + term2 * aOutTangent + term3 * b + term4 * bOutTangent
     } else {
-      const t2 = t * t
-      const t3 = t2 * t
-      const term1 = this.dim.create();
-      const term2 = this.dim.create();
-      const term3 = this.dim.create();
-      const term4 = this.dim.create();
-      const res = this.dim.create();
+      const s1 = this.dim.create()
+      const s2 = this.dim.create()
+      const s3 = this.dim.create()
+      const s4 = this.dim.create()
+      const res = this.dim.create()
 
-      this.dim.scale(term1, a, (2 * t3 - 3 * t2 + 1));
-      this.dim.scale(term2, aOutTangent, td * (t3 - 2 * t2 + t));
-      this.dim.scale(term3, b, (-2 * t3 + 3 * t2));
-      this.dim.scale(term4, bInTangent, td * (t3 - t2));
+      this.dim.scale(s1, a, term1)
+      this.dim.scale(s2, aOutTangent, term2)
+      this.dim.scale(s3, b, term3)
+      this.dim.scale(s4, bInTangent, term4)
 
-      this.dim.add(res, term1, term2);
-      this.dim.add(res, res, term3);
-      this.dim.add(res, res, term4);
+      this.dim.add(res, s1, s2)
+      this.dim.add(res, res, s3)
+      this.dim.add(res, res, s4)
       return res
     }
   }

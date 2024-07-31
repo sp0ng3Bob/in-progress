@@ -11,11 +11,9 @@ const mat4 = glMatrix.mat4
 //const defaultSampler
 
 /* Private helpers */
-function enableAndSetUpVertexAttribute(gl, attribute, size) {
+function enableAndSetUpVertexAttribute(gl, attribute, size, type) {
   gl.enableVertexAttribArray(attribute)
-  gl.vertexAttribPointer(
-    attribute,
-    size, gl.FLOAT, false, 0, 0)
+  gl.vertexAttribPointer(attribute, size, type, false, 0, 0)
 }
 
 function createAndBindBuffer(gl, data, attribute = undefined, target = undefined, usage = undefined) {
@@ -38,16 +36,12 @@ function prepareBuffers(gl, program, bufferData) {
   const vao = gl.createVertexArray()
   gl.bindVertexArray(vao)
 
-  const positionBuffer = createAndBindBuffer(gl, positions, { attr: program.attributes.aPosition, size: 3 });
-  const normalBuffer = createAndBindBuffer(gl, normals, { attr: program.attributes.aNormal, size: 2 });
+  const positionBuffer = createAndBindBuffer(gl, positions, { attr: program.attributes.aPosition, size: 3, type: gl.FLOAT });
+  const normalBuffer = createAndBindBuffer(gl, normals, { attr: program.attributes.aNormal, size: 3, type: gl.FLOAT });
   const indexBuffer = createAndBindBuffer(gl, indices, null, gl.ELEMENT_ARRAY_BUFFER);
-  const uvBuffer = createAndBindBuffer(gl, uvs, { attr: program.attributes.aTexCoord, size: 2 });
+  const uvBuffer = createAndBindBuffer(gl, uvs, { attr: program.attributes.aTexCoord, size: 2, type: gl.FLOAT });
 
-  return { //positions, normals and indices not really needed...
-    //positions: positionBuffer,
-    //normals: normalBuffer,
-    //indices: indexBuffer,
-    //uvs: uvBuffer,
+  return {
     indexCount: indices.length,
     vao,
   };
@@ -310,7 +304,7 @@ function setUpTexture(gl, textureImage) {
   if (textureImage != "") {
     fetchImage(new URL(textureImage, window.location))
       .then(image => {
-        return WebGL.createTexture(gl, { image })
+        return WebGL.createTexture(gl, { image, mip: true, wrapS: gl.REPEAT, wrapT: gl.REPEAT, min: gl.NEAREST_MIPMAP_LINEAR, mag: gl.LINEAR })
       })
       .catch(error => {
         console.error('Error loading image:', error);
@@ -326,7 +320,7 @@ export function createPlane(gl, program, size, position, rotation, color, textur
   const outModel = prepareBuffers(gl, program, bufferData)
 
   outModel.texture = setUpTexture(gl, textureImage)
-  outModel.sampler = WebGL.createSampler(gl, {})
+  outModel.sampler = WebGL.createSampler(gl, { wrapS: gl.REPEAT, wrapT: gl.REPEAT, min: gl.NEAREST_MIPMAP_LINEAR, mag: gl.LINEAR })
   outModel.baseColor = getNormalisedRGB(color)
   return outModel
 }
@@ -340,7 +334,7 @@ export function createCube(gl, program, size, position, rotation, color, texture
   const outModel = prepareBuffers(gl, program, bufferData)
 
   outModel.texture = setUpTexture(gl, textureImage)
-  outModel.sampler = WebGL.createSampler(gl, {})
+  outModel.sampler = WebGL.createSampler(gl, { wrapS: gl.REPEAT, wrapT: gl.REPEAT, min: gl.NEAREST_MIPMAP_LINEAR, mag: gl.LINEAR })
   outModel.baseColor = getNormalisedRGB(color)
   return outModel
 }
@@ -350,7 +344,7 @@ export function createSphere(gl, program, radius, position, rotation, color, tex
   const outModel = prepareBuffers(gl, program, bufferData)
 
   outModel.texture = setUpTexture(gl, textureImage)
-  outModel.sampler = WebGL.createSampler(gl, {})
+  outModel.sampler = WebGL.createSampler(gl, { wrapS: gl.REPEAT, wrapT: gl.REPEAT, min: gl.NEAREST_MIPMAP_LINEAR, mag: gl.LINEAR })
   outModel.baseColor = getNormalisedRGB(color)
   return outModel
 }
@@ -360,7 +354,7 @@ export function createTorus(gl, program, radius, holeRadius, position, rotation,
   const outModel = prepareBuffers(gl, program, bufferData)
 
   outModel.texture = setUpTexture(gl, textureImage)
-  outModel.sampler = WebGL.createSampler(gl, {})
+  outModel.sampler = WebGL.createSampler(gl, { wrapS: gl.REPEAT, wrapT: gl.REPEAT, min: gl.NEAREST_MIPMAP_LINEAR, mag: gl.LINEAR })
   outModel.baseColor = getNormalisedRGB(color)
   return outModel
 }
