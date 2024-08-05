@@ -54,15 +54,15 @@ export class AnimationSampler {
       this.bTangents = this.output.slice(secondThird)
       this.output = this.output.slice(firtsThird, secondThird)*/
 
-      this.aTangents = new Float32Array(size * this.csbs);
-      this.bTangents = new Float32Array(size * this.csbs);
-      let values = new Float32Array(size * this.csbs);
+      this.aTangents = new Float32Array(size * this.csbs)
+      this.bTangents = new Float32Array(size * this.csbs)
+      let values = new Float32Array(size * this.csbs)
 
       for (let i = 0; i < size; i++) {
         for (let j = 0; j < this.csbs; j++) {
-          this.aTangents[i * this.csbs + j] = this.output[(i * 3 * this.csbs) + j];
-          values[i * this.csbs + j] = this.output[(i * 3 * this.csbs) + this.csbs + j];
-          this.bTangents[i * this.csbs + j] = this.output[(i * 3 * this.csbs) + (2 * this.csbs) + j];
+          this.aTangents[i * this.csbs + j] = this.output[(i * 3 * this.csbs) + j]
+          values[i * this.csbs + j] = this.output[(i * 3 * this.csbs) + this.csbs + j]
+          this.bTangents[i * this.csbs + j] = this.output[(i * 3 * this.csbs) + (2 * this.csbs) + j]
         }
       }
 

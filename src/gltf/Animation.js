@@ -4,7 +4,6 @@ export class Animation {
     this.name = options.name
     this.channels = options.channels
     this.duration = this.calculateAnimationDuration()
-    //this.reset() //idk -.-
   }
 
   calculateAnimationDuration() {
@@ -39,13 +38,7 @@ export class Animation {
   updateNodeValue(channel, value) {
     switch (channel.target.path) {
       case 'translation':
-        channel.target.node[channel.target.path] = value
-        channel.target.node.updateMatrix()
-        break
       case 'rotation':
-        channel.target.node[channel.target.path] = value
-        channel.target.node.updateMatrix()
-        break
       case 'scale':
         channel.target.node[channel.target.path] = value
         channel.target.node.updateMatrix()

@@ -70,15 +70,15 @@ export class Controls {
     let zoomSpeed = 0.01
     if (e.shiftKey) { zoomSpeed = 0.1 }
 
-    /*const delta = e.deltaY * zoomSpeed * this.zoomFactor;
-    const newTranslationZ = this.camera.translation[2] + delta;
+    /*const delta = e.deltaY * zoomSpeed * this.zoomFactor
+    const newTranslationZ = this.camera.translation[2] + delta
 
     // Ensure that translation[2] moves towards zero without crossing it
     if ((this.camera.translation[2] > 0 && newTranslationZ >= 0) || (this.camera.translation[2] < 0 && newTranslationZ <= 0)) {
-      this.camera.translation[2] = newTranslationZ;
+      this.camera.translation[2] = newTranslationZ
     } else {
       // If the new translation would cross zero, set it to zero
-      this.camera.translation[2] = 0;
+      this.camera.translation[2] = 0
     }*/
 
     if (Math.abs(camera.translation[2] + e.deltaY * zoomSpeed * this.zoomFactor) > 0.01) {
@@ -193,53 +193,53 @@ export class Controls {
   }
 
   quatToEuler(quat) { //https://stackoverflow.com/questions/15955358/javascript-gl-matrix-lib-how-to-get-euler-angles-from-quat-and-quat-from-angles
-    const w = quat[3];
-    const x = quat[0];
-    const y = quat[1];
-    const z = quat[2];
+    const w = quat[3]
+    const x = quat[0]
+    const y = quat[1]
+    const z = quat[2]
 
-    const ysqr = y * y;
+    const ysqr = y * y
 
     // roll (x-axis rotation)
-    const t0 = 2.0 * (w * x + y * z);
-    const t1 = 1.0 - 2.0 * (x * x + ysqr);
-    const roll = Math.atan2(t0, t1);
+    const t0 = 2.0 * (w * x + y * z)
+    const t1 = 1.0 - 2.0 * (x * x + ysqr)
+    const roll = Math.atan2(t0, t1)
 
     // pitch (y-axis rotation)
-    let t2 = 2.0 * (w * y - z * x);
-    t2 = t2 > 1.0 ? 1.0 : t2;
-    t2 = t2 < -1.0 ? -1.0 : t2;
-    const pitch = Math.asin(t2);
+    let t2 = 2.0 * (w * y - z * x)
+    t2 = t2 > 1.0 ? 1.0 : t2
+    t2 = t2 < -1.0 ? -1.0 : t2
+    const pitch = Math.asin(t2)
 
     // yaw (z-axis rotation)
-    const t3 = 2.0 * (w * z + x * y);
-    const t4 = 1.0 - 2.0 * (ysqr + z * z);
-    const yaw = Math.atan2(t3, t4);
+    const t3 = 2.0 * (w * z + x * y)
+    const t4 = 1.0 - 2.0 * (ysqr + z * z)
+    const yaw = Math.atan2(t3, t4)
 
-    const euler = [roll, pitch, yaw];
+    const euler = [roll, pitch, yaw]
 
     // Convert to degrees
-    return euler.map(angle => angle * (180 / Math.PI));
-    /*const w = quat[3];
-    const x = quat[0];
-    const y = quat[1];
-    const z = quat[2];
+    return euler.map(angle => angle * (180 / Math.PI))
+    /*const w = quat[3]
+    const x = quat[0]
+    const y = quat[1]
+    const z = quat[2]
 
     const wx = w * x,
       wy = w * y,
-      wz = w * z;
+      wz = w * z
     const xx = x * x,
       xy = x * y,
-      xz = x * z;
+      xz = x * z
     const yy = y * y,
       yz = y * z,
-      zz = z * z;
+      zz = z * z
 
     const xyz = [
       -Math.atan2(2 * (yz - wx), 1 - 2 * (xx + yy)),
       Math.asin(2 * (xz + wy)),
       -Math.atan2(2 * (xy - wz), 1 - 2 * (yy + zz)),
-    ];
-    return xyz.map((x) => (x * 180) / Math.PI);*/
+    ]
+    return xyz.map((x) => (x * 180) / Math.PI)*/
   }
 }

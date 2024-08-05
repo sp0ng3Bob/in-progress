@@ -1,16 +1,16 @@
-import { BufferView } from './BufferView.js';
-import { Accessor } from './Accessor.js';
-import { Sampler } from './Sampler.js';
-import { Animation } from './Animation.js';
-import { AnimationSampler } from './AnimationSampler.js';
-import { Texture } from './Texture.js';
-import { Material } from './Material.js';
-import { Primitive } from './Primitive.js';
-import { Mesh } from './Mesh.js';
-import { PerspectiveCamera } from './PerspectiveCamera.js';
-import { OrthographicCamera } from './OrthographicCamera.js';
-import { Node } from './Node.js';
-import { Scene } from './Scene.js';
+import { BufferView } from './BufferView.js'
+import { Accessor } from './Accessor.js'
+import { Sampler } from './Sampler.js'
+import { Animation } from './Animation.js'
+import { AnimationSampler } from './AnimationSampler.js'
+import { Texture } from './Texture.js'
+import { Material } from './Material.js'
+import { Primitive } from './Primitive.js'
+import { Mesh } from './Mesh.js'
+import { PerspectiveCamera } from './PerspectiveCamera.js'
+import { OrthographicCamera } from './OrthographicCamera.js'
+import { Node } from './Node.js'
+import { Scene } from './Scene.js'
 import { Skin } from "./Skin.js"
 
 import * as BB from "../helpers/BoundingBox.js"
@@ -25,39 +25,39 @@ import * as BB from "../helpers/BoundingBox.js"
 export class GLTFLoader {
 
   constructor() {
-    this.gltf = null;
-    this.glbBuffers = null;
-    this.gltfUrl = null;
-    this.dirname = null;
+    this.gltf = null
+    this.glbBuffers = null
+    this.gltfUrl = null
+    this.dirname = null
 
-    this.cache = new Map();
+    this.cache = new Map()
   }
 
   async fetchJson(url) {
-    return fetch(url).then(response => response.json());
+    return fetch(url).then(response => response.json())
   }
 
   async fetchBuffer(url) {
-    return fetch(url).then(response => response.arrayBuffer());
+    return fetch(url).then(response => response.arrayBuffer())
   }
 
   async fetchImage(url) {
     return new Promise((resolve, reject) => {
-      const image = new Image();
-      image.addEventListener('load', e => resolve(image));
-      image.addEventListener('error', reject);
-      image.src = url;
-    });
+      const image = new Image()
+      image.addEventListener('load', e => resolve(image))
+      image.addEventListener('error', reject)
+      image.src = url
+    })
   }
 
   findByNameOrIndex(set, nameOrIndex, index) {
     if (!isNaN(Number(nameOrIndex))) {
-      return set[nameOrIndex];
+      return set[nameOrIndex]
     } else {
       if (index > -1) {
-        return set.find(element => element.camera === index);
+        return set.find(element => element.camera === index)
       } else {
-        return set.find(element => element.name === nameOrIndex);
+        return set.find(element => element.name === nameOrIndex)
       }
     }
   }
@@ -133,16 +133,16 @@ export class GLTFLoader {
   }
 
   async loadImage(nameOrIndex) {
-    const gltfSpec = this.findByNameOrIndex(this.gltf.images, nameOrIndex);
+    const gltfSpec = this.findByNameOrIndex(this.gltf.images, nameOrIndex)
     if (this.cache.has(gltfSpec)) {
-      return this.cache.get(gltfSpec);
+      return this.cache.get(gltfSpec)
     }
 
     if (gltfSpec.uri) {
-      const url = new URL(gltfSpec.uri, this.gltfUrl);
-      const image = await this.fetchImage(url);
-      this.cache.set(gltfSpec, image);
-      return image;
+      const url = new URL(gltfSpec.uri, this.gltfUrl)
+      const image = await this.fetchImage(url)
+      this.cache.set(gltfSpec, image)
+      return image
     } else {
       const bufferView = await this.loadBufferView(gltfSpec.bufferView)
       const imageBuffer = this.glbBuffers.slice(bufferView.byteOffset, bufferView.byteOffset + bufferView.byteLength)
@@ -157,58 +157,58 @@ export class GLTFLoader {
   }
 
   async loadBuffer(nameOrIndex) {
-    const gltfSpec = this.findByNameOrIndex(this.gltf.buffers, nameOrIndex);
+    const gltfSpec = this.findByNameOrIndex(this.gltf.buffers, nameOrIndex)
     if (this.cache.has(gltfSpec)) {
-      return this.cache.get(gltfSpec);
+      return this.cache.get(gltfSpec)
     }
 
     if (gltfSpec.uri) {
-      const url = new URL(gltfSpec.uri, this.gltfUrl);
-      const buffer = await this.fetchBuffer(url);
-      this.cache.set(gltfSpec, buffer);
-      return buffer;
+      const url = new URL(gltfSpec.uri, this.gltfUrl)
+      const buffer = await this.fetchBuffer(url)
+      this.cache.set(gltfSpec, buffer)
+      return buffer
     } else if (this.glbBuffers) {
-      const bufferView = new DataView(this.glbBuffers, gltfSpec.byteOffset ?? 0, gltfSpec.byteLength);
-      const buffer = bufferView.buffer;
-      this.cache.set(gltfSpec, buffer);
-      return buffer;
+      const bufferView = new DataView(this.glbBuffers, gltfSpec.byteOffset ?? 0, gltfSpec.byteLength)
+      const buffer = bufferView.buffer
+      this.cache.set(gltfSpec, buffer)
+      return buffer
     } else {
-      throw new Error("loadBuffer error: no URI or GLB buffer data found.");
+      throw new Error("loadBuffer error: no URI or GLB buffer data found.")
     }
   }
 
   async loadBufferView(nameOrIndex) {
-    const gltfSpec = this.findByNameOrIndex(this.gltf.bufferViews, nameOrIndex);
+    const gltfSpec = this.findByNameOrIndex(this.gltf.bufferViews, nameOrIndex)
     if (this.cache.has(gltfSpec)) {
-      return this.cache.get(gltfSpec);
+      return this.cache.get(gltfSpec)
     }
 
     const bufferView = new BufferView({
       ...gltfSpec,
       buffer: await this.loadBuffer(gltfSpec.buffer),
-    });
-    this.cache.set(gltfSpec, bufferView);
-    return bufferView;
+    })
+    this.cache.set(gltfSpec, bufferView)
+    return bufferView
   }
 
   loadSparseBufferView(nameOrIndex, sparseData) {
-    const gltfSpec = this.findByNameOrIndex(this.gltf.bufferViews, nameOrIndex);
+    const gltfSpec = this.findByNameOrIndex(this.gltf.bufferViews, nameOrIndex)
     if (this.cache.has(gltfSpec)) {
-      return this.cache.get(gltfSpec);
+      return this.cache.get(gltfSpec)
     }
 
     const bufferView = new BufferView({
       byteLength: sparseData.length,
       buffer: sparseData.buffer,
-    });
-    this.cache.set(gltfSpec, bufferView);
-    return bufferView;
+    })
+    this.cache.set(gltfSpec, bufferView)
+    return bufferView
   }
 
   async loadAccessor(nameOrIndex) {
-    const gltfSpec = this.findByNameOrIndex(this.gltf.accessors, nameOrIndex);
+    const gltfSpec = this.findByNameOrIndex(this.gltf.accessors, nameOrIndex)
     if (this.cache.has(gltfSpec)) {
-      return this.cache.get(gltfSpec);
+      return this.cache.get(gltfSpec)
     }
 
     const accessorTypeToNumComponentsMap = {
@@ -219,7 +219,7 @@ export class GLTFLoader {
       MAT2: 4,
       MAT3: 9,
       MAT4: 16,
-    };
+    }
 
     const typedArrayConstructor = {
       5120: Int8Array,
@@ -235,7 +235,7 @@ export class GLTFLoader {
     const type = accessorTypeToNumComponentsMap[gltfSpec.type]
     const byteLength = gltfSpec.count * type
     if (gltfSpec.sparse) {
-      const { count, values, indices } = gltfSpec.sparse;
+      const { count, values, indices } = gltfSpec.sparse
 
       const valuesAccessor = await this.loadBufferView(values.bufferView)
       const indicesAccessor = await this.loadBufferView(indices.bufferView)
@@ -255,19 +255,19 @@ export class GLTFLoader {
       const indicesData = new IndicesArray(indicesAccessor.buffer, indicesAccessor.byteOffset, indicesAccessor.byteLength / IndicesArray.BYTES_PER_ELEMENT)
       const valuesData = new ValuesArray(valuesAccessor.buffer, valuesAccessor.byteOffset, valuesAccessor.byteLength / ValuesArray.BYTES_PER_ELEMENT)
 
-      console.log("Sparse Accessor Debugging:");
-      console.log("Initial sparse data:", sparseData);
-      //console.log("Indices Data:", indicesData);
-      //console.log("Values Data:", valuesData);
+      console.log("Sparse Accessor Debugging:")
+      console.log("Initial sparse data:", sparseData)
+      //console.log("Indices Data:", indicesData)
+      //console.log("Values Data:", valuesData)
 
       for (let i = 0; i < count; i++) {
         const index = indicesData[i]
         const value = valuesData.subarray(i * type, (i + 1) * type)
-        //console.log(`Setting value at index ${index}:`, value);
-        sparseData.set(value, index * type);
+        //console.log(`Setting value at index ${index}:`, value)
+        sparseData.set(value, index * type)
       }
 
-      console.log("Final Sparse Data:", sparseData);
+      console.log("Final Sparse Data:", sparseData)
       //bufferView = sparseData
       startingData.buffer = sparseData.buffer
       bufferView = startingData
@@ -286,19 +286,19 @@ export class GLTFLoader {
       ...gltfSpec,
       bufferView,
       numComponents: type,
-    });
+    })
 
-    this.cache.set(gltfSpec, accessor);
-    return accessor;
+    this.cache.set(gltfSpec, accessor)
+    return accessor
   }
 
   async loadSampler(nameOrIndex, kind, animationIndex = null, animationPath = null) {
     let gltfSpec
     let sampler
     if (kind == "samplers") {
-      gltfSpec = this.findByNameOrIndex(this.gltf[kind], nameOrIndex);
+      gltfSpec = this.findByNameOrIndex(this.gltf[kind], nameOrIndex)
       if (this.cache.has(gltfSpec)) {
-        return this.cache.get(gltfSpec);
+        return this.cache.get(gltfSpec)
       }
 
       sampler = new Sampler({
@@ -306,11 +306,11 @@ export class GLTFLoader {
         mag: gltfSpec.magFilter,
         wrapS: gltfSpec.wrapS,
         wrapT: gltfSpec.wrapT,
-      });
+      })
     } else {
-      gltfSpec = this.findByNameOrIndex(this.gltf[kind][animationIndex].samplers, nameOrIndex);
+      gltfSpec = this.findByNameOrIndex(this.gltf[kind][animationIndex].samplers, nameOrIndex)
       if (this.cache.has(gltfSpec)) {
-        return this.cache.get(gltfSpec);
+        return this.cache.get(gltfSpec)
       }
 
       sampler = new AnimationSampler({
@@ -318,102 +318,112 @@ export class GLTFLoader {
         input: await this.loadAccessor(gltfSpec.input), //gltfSpec.input,
         output: await this.loadAccessor(gltfSpec.output), //gltfSpec.output,
         interpolation: gltfSpec.interpolation
-      });
+      })
     }
 
-    this.cache.set(gltfSpec, sampler);
-    return sampler;
+    this.cache.set(gltfSpec, sampler)
+    return sampler
   }
 
   async loadTexture(nameOrIndex) {
-    const gltfSpec = this.findByNameOrIndex(this.gltf.textures, nameOrIndex);
+    const gltfSpec = this.findByNameOrIndex(this.gltf.textures, nameOrIndex)
     if (this.cache.has(gltfSpec)) {
-      return this.cache.get(gltfSpec);
+      return this.cache.get(gltfSpec)
     }
 
-    const options = {};
+    const options = {}
     if (gltfSpec.source !== undefined) {
-      options.image = await this.loadImage(gltfSpec.source);
-    }
-    if (gltfSpec.sampler !== undefined) {
-      options.sampler = await this.loadSampler(gltfSpec.sampler, "samplers");
+      options.image = await this.loadImage(gltfSpec.source)
     }
 
-    const texture = new Texture(options);
-    this.cache.set(gltfSpec, texture);
-    return texture;
+    //When texture.sampler is undefined, a sampler with repeat wrapping (in both directions) and auto filtering MUST be used.
+    if (gltfSpec.sampler !== undefined) {
+      options.sampler = await this.loadSampler(gltfSpec.sampler, "samplers")
+    } /*else {
+      options.sampler = defaultSampler...
+    }*/
+
+    const texture = new Texture(options)
+    this.cache.set(gltfSpec, texture)
+    return texture
   }
 
   async loadMaterial(nameOrIndex) {
-    const gltfSpec = this.findByNameOrIndex(this.gltf.materials, nameOrIndex);
+    const gltfSpec = this.findByNameOrIndex(this.gltf.materials, nameOrIndex)
     if (this.cache.has(gltfSpec)) {
-      return this.cache.get(gltfSpec);
+      return this.cache.get(gltfSpec)
     }
 
-    const options = {};
-    const pbr = gltfSpec.pbrMetallicRoughness;
+    const options = {}
+    const pbr = gltfSpec.pbrMetallicRoughness
     if (pbr) {
       if (pbr.baseColorTexture) {
-        options.baseColorTexture = await this.loadTexture(pbr.baseColorTexture.index);
-        options.baseColorTexCoord = pbr.baseColorTexture.texCoord;
+        options.baseColorTexture = await this.loadTexture(pbr.baseColorTexture.index)
+        options.baseColorTexCoord = pbr.baseColorTexture.texCoord
       }
       if (pbr.metallicRoughnessTexture) {
-        options.metallicRoughnessTexture = await this.loadTexture(pbr.metallicRoughnessTexture.index);
-        options.metallicRoughnessTexCoord = pbr.metallicRoughnessTexture.texCoord;
+        options.metallicRoughnessTexture = await this.loadTexture(pbr.metallicRoughnessTexture.index)
+        options.metallicRoughnessTexCoord = pbr.metallicRoughnessTexture.texCoord
       }
-      options.baseColorFactor = pbr.baseColorFactor ?? [1.0, 1.0, 1.0, 1.0];
-      options.metallicFactor = pbr.metallicFactor ?? 1.0;
-      options.roughnessFactor = pbr.roughnessFactor ?? 1.0;
+      options.baseColorFactor = pbr.baseColorFactor ?? [1.0, 1.0, 1.0, 1.0]
+      options.metallicFactor = pbr.metallicFactor ?? 1.0
+      options.roughnessFactor = pbr.roughnessFactor ?? 1.0
     }
 
     if (gltfSpec.normalTexture) {
-      options.normalTexture = await this.loadTexture(gltfSpec.normalTexture.index);
-      options.normalTexCoord = gltfSpec.normalTexture.texCoord;
-      options.normalFactor = gltfSpec.normalTexture.scale;
+      options.normalTexture = await this.loadTexture(gltfSpec.normalTexture.index)
+      options.normalTexCoord = gltfSpec.normalTexture.texCoord
+      options.normalFactor = gltfSpec.normalTexture.scale
     }
 
     if (gltfSpec.occlusionTexture) {
-      options.occlusionTexture = await this.loadTexture(gltfSpec.occlusionTexture.index);
-      options.occlusionTexCoord = gltfSpec.occlusionTexture.texCoord;
-      options.occlusionFactor = gltfSpec.occlusionTexture.strength;
+      options.occlusionTexture = await this.loadTexture(gltfSpec.occlusionTexture.index)
+      options.occlusionTexCoord = gltfSpec.occlusionTexture.texCoord
+      options.occlusionFactor = gltfSpec.occlusionTexture.strength
     }
 
     if (gltfSpec.emissiveTexture) {
-      options.emissiveTexture = await this.loadTexture(gltfSpec.emissiveTexture.index);
-      options.emissiveTexCoord = gltfSpec.emissiveTexture.texCoord;
+      options.emissiveTexture = await this.loadTexture(gltfSpec.emissiveTexture.index)
+      options.emissiveTexCoord = gltfSpec.emissiveTexture.texCoord
     }
 
-    options.emissiveFactor = gltfSpec.emissiveFactor ?? [0.0, 0.0, 0.0];
-    options.alphaMode = gltfSpec.alphaMode ?? "OPAQUE";
-    options.alphaCutoff = gltfSpec.alphaCutoff ?? 0.5;
-    options.doubleSided = gltfSpec.doubleSided ?? false;
+    options.emissiveFactor = gltfSpec.emissiveFactor ?? [0.0, 0.0, 0.0]
+    options.alphaMode = gltfSpec.alphaMode ?? "OPAQUE"
+    options.alphaCutoff = gltfSpec.alphaCutoff ?? 0.5
+    options.doubleSided = gltfSpec.doubleSided ?? false
     console.log("MATERIAL WHAAT??", gltfSpec, options)
 
-    const material = new Material(options);
-    this.cache.set(gltfSpec, material);
-    return material;
+    const material = new Material(options)
+    this.cache.set(gltfSpec, material)
+    return material
   }
 
+  /*
+  glTF 2.0 supports only static 2D textures.
+    When texture.source is undefined, the image SHOULD be provided by an extension or application-specific means, otherwise the texture object is undefined.
+    Implementation Note
+    Client implementations may render such textures with a predefined placeholder image or being filled with some error color (usually magenta).
+  */
   async loadMesh(nameOrIndex) {
-    const gltfSpec = this.findByNameOrIndex(this.gltf.meshes, nameOrIndex);
+    const gltfSpec = this.findByNameOrIndex(this.gltf.meshes, nameOrIndex)
     if (this.cache.has(gltfSpec)) {
-      return this.cache.get(gltfSpec);
+      return this.cache.get(gltfSpec)
     }
 
-    const options = { primitives: [] } //, weights: [] };
+    const options = { primitives: [] } //, weights: [] }
     for (const primitiveSpec of gltfSpec.primitives) {
-      const primitiveOptions = { attributes: {} };
-      //primitiveOptions.attributes = {};
+      const primitiveOptions = { attributes: {} }
+      //primitiveOptions.attributes = {}
       for (const name in primitiveSpec.attributes) {
-        primitiveOptions.attributes[name] = await this.loadAccessor(primitiveSpec.attributes[name]);
+        primitiveOptions.attributes[name] = await this.loadAccessor(primitiveSpec.attributes[name])
       }
       if (primitiveSpec.indices !== undefined) {
-        primitiveOptions.indices = await this.loadAccessor(primitiveSpec.indices);
+        primitiveOptions.indices = await this.loadAccessor(primitiveSpec.indices)
       }
       if (primitiveSpec.material !== undefined) {
-        primitiveOptions.material = await this.loadMaterial(primitiveSpec.material);
+        primitiveOptions.material = await this.loadMaterial(primitiveSpec.material)
       }
-      primitiveOptions.mode = primitiveSpec.mode;
+      primitiveOptions.mode = primitiveSpec.mode
 
       // morphing targets - blend shapes
       if (primitiveSpec.targets) {
@@ -421,42 +431,42 @@ export class GLTFLoader {
         for (const target in primitiveSpec.targets) {
           primitiveOptions.targets[target] = {}
           for (const name in primitiveSpec.targets[target]) {
-            primitiveOptions.targets[target][name] = await this.loadAccessor(primitiveSpec.targets[target][name]);
+            primitiveOptions.targets[target][name] = await this.loadAccessor(primitiveSpec.targets[target][name])
           }
         }
       }
 
-      const primitive = new Primitive(primitiveOptions);
-      options.primitives.push(primitive);
+      const primitive = new Primitive(primitiveOptions)
+      options.primitives.push(primitive)
     }
 
     if (gltfSpec.weights) {
       options.weights = [...gltfSpec.weights]
     }
 
-    const mesh = new Mesh(options);
-    this.cache.set(gltfSpec, mesh);
-    return mesh;
+    const mesh = new Mesh(options)
+    this.cache.set(gltfSpec, mesh)
+    return mesh
   }
 
   async loadCamera(nameOrIndex) {
-    const gltfSpec = this.findByNameOrIndex(this.gltf.cameras, nameOrIndex);
+    const gltfSpec = this.findByNameOrIndex(this.gltf.cameras, nameOrIndex)
     if (this.cache.has(gltfSpec)) {
-      return this.cache.get(gltfSpec);
+      return this.cache.get(gltfSpec)
     }
 
     if (gltfSpec.type === 'perspective') {
-      const persp = gltfSpec.perspective;
+      const persp = gltfSpec.perspective
       const camera = new PerspectiveCamera({
         aspect: persp.aspectRatio,
         fov: persp.yfov,
         near: persp.znear,
         far: persp.zfar,
-      });
-      this.cache.set(gltfSpec, camera);
-      return camera;
+      })
+      this.cache.set(gltfSpec, camera)
+      return camera
     } else if (gltfSpec.type === 'orthographic') {
-      const ortho = gltfSpec.orthographic;
+      const ortho = gltfSpec.orthographic
       const camera = new OrthographicCamera({
         //left: -ortho.xmag,
         right: ortho.xmag,
@@ -464,37 +474,37 @@ export class GLTFLoader {
         top: ortho.ymag,
         near: ortho.znear,
         far: ortho.zfar,
-      });
-      this.cache.set(gltfSpec, camera);
-      return camera;
+      })
+      this.cache.set(gltfSpec, camera)
+      return camera
     }
   }
 
   async loadNode(nameOrIndex, index = -1) {
-    const gltfSpec = this.findByNameOrIndex(this.gltf.nodes, nameOrIndex, index);
+    const gltfSpec = this.findByNameOrIndex(this.gltf.nodes, nameOrIndex, index)
     if (this.cache.has(gltfSpec)) {
-      return this.cache.get(gltfSpec);
+      return this.cache.get(gltfSpec)
     }
     if (gltfSpec == undefined) {
       return
     }
 
-    const options = { ...gltfSpec, children: [] };
+    const options = { ...gltfSpec, children: [] }
     console.log(nameOrIndex, this.cache, gltfSpec)
 
     if (gltfSpec.children !== undefined) {
       for (const nodeIndex of gltfSpec.children) {
-        const node = await this.loadNode(nodeIndex);
-        options.children.push(node);
+        const node = await this.loadNode(nodeIndex)
+        options.children.push(node)
       }
     }
 
     if (gltfSpec.camera !== undefined) {
-      options.camera = await this.loadCamera(gltfSpec.camera);
+      options.camera = await this.loadCamera(gltfSpec.camera)
     }
 
     if (gltfSpec.mesh !== undefined) {
-      options.mesh = await this.loadMesh(gltfSpec.mesh);
+      options.mesh = await this.loadMesh(gltfSpec.mesh)
     }
 
     if (gltfSpec.skin !== undefined) {
@@ -505,23 +515,23 @@ export class GLTFLoader {
       }*/
     }
 
-    const node = new Node(options);
-    this.cache.set(gltfSpec, node);
-    return node;
+    const node = new Node(options)
+    this.cache.set(gltfSpec, node)
+    return node
   }
 
   async loadScene(nameOrIndex) {
-    const gltfSpec = this.findByNameOrIndex(this.gltf.scenes, nameOrIndex);
+    const gltfSpec = this.findByNameOrIndex(this.gltf.scenes, nameOrIndex)
     if (this.cache.has(gltfSpec)) {
-      return this.cache.get(gltfSpec);
+      return this.cache.get(gltfSpec)
     }
 
-    const options = { nodes: [] };
+    const options = { nodes: [] }
     if (gltfSpec.nodes) {
       console.log("LOAD SCENE: gltfSpec.nodes", gltfSpec.nodes)
       for (const nodeIndex of gltfSpec.nodes) {
-        const node = await this.loadNode(nodeIndex);
-        options.nodes.push(node);
+        const node = await this.loadNode(nodeIndex)
+        options.nodes.push(node)
       }
     }
 
@@ -533,9 +543,9 @@ export class GLTFLoader {
       }
     }
 
-    const scene = new Scene(options);
-    this.cache.set(gltfSpec, scene);
-    return scene;
+    const scene = new Scene(options)
+    this.cache.set(gltfSpec, scene)
+    return scene
   }
 
   async loadSkin(nameOrIndex) {
@@ -559,8 +569,8 @@ export class GLTFLoader {
       options.inverseBindMatrices = await this.loadAccessor(gltfSpec.inverseBindMatrices)
     }
 
-    const skin = new Skin(options);
-    this.cache.set(gltfSpec, skin);
+    const skin = new Skin(options)
+    this.cache.set(gltfSpec, skin)
     return skin
   }
 

@@ -207,12 +207,16 @@ export class Renderer {
     const gl = this.gl
     const vao = gl.createVertexArray()
     gl.bindVertexArray(vao)
+
     if (primitive.indices) {
       const bufferView = primitive.indices.bufferView
 
-      if (!bufferView.target) {
+      /*if (!bufferView.target) {
         bufferView.target = gl.ELEMENT_ARRAY_BUFFER
-      }
+      } else {
+        console.log(`WTF primitive?: ${bufferView.target}`)
+      }*/
+      bufferView.target = gl.ELEMENT_ARRAY_BUFFER
 
       const buffer = this.prepareBufferView(bufferView)
       gl.bindBuffer(bufferView.target, buffer)
@@ -241,7 +245,7 @@ export class Renderer {
       }
     }
 
-    for (let target in primitive.targets) {
+    /*for (let target in primitive.targets) {
       if (Number(target) < 2) {
         for (let name in primitive.targets[target]) {
           const accessor = primitive.targets[target][name]
@@ -266,7 +270,7 @@ export class Renderer {
           }
         }
       }
-    }
+    }*/
 
     //gl.bindVertexArray(null)
     //gl.bindBuffer(gl.ARRAY_BUFFER, null)
@@ -362,21 +366,21 @@ export class Renderer {
     }
 
     for (const light of scene.lights ?? []) {
-      this.renderGeoNode(light, "specific program", mvpMatrix)
+      this.renderGeoNode(light, "pbr", mvpMatrix)
     }
 
     for (const geo of scene.geoNodes ?? []) {
-      this.renderGeoNode(geo, "specific program", mvpMatrix)
+      this.renderGeoNode(geo, "pbr", mvpMatrix)
     }
   }
 
-  renderGeoNode(geoBuffers, program0todo, mvpMatrix) {
-    const gl = this.gl;
-    const program = this.programs.pbr; //.simple
+  renderGeoNode(geoBuffers, prog, mvpMatrix) {
+    const gl = this.gl
+    const program = this.programs[prog] //.pbr //.simple
     mvpMatrix = mat4.clone(mvpMatrix)
 
     // Use shader program
-    //gl.useProgram(program.program);
+    gl.useProgram(program.program)
 
     gl.bindVertexArray(geoBuffers.vao)
 
@@ -391,7 +395,7 @@ export class Renderer {
       //gl.uniform1i(program.uniforms.uTexture, 0)
       gl.activeTexture(gl.TEXTURE0)
       gl.bindTexture(gl.TEXTURE_2D, geoBuffers.texture)
-      gl.bindSampler(0, geoBuffers.sampler)
+      //gl.bindSampler(0, geoBuffers.sampler)
       gl.uniform1i(program.uniforms.uHasBaseColorTexture, 1)
     } else {
       gl.uniform1i(program.uniforms.uHasBaseColorTexture, 0)
@@ -453,23 +457,19 @@ export class Renderer {
     const vao = this.glObjects.get(primitive)
     const material = primitive.material
 
-    let texture
-    let glTexture
-    let glSampler
-
     gl.bindVertexArray(vao)
 
     gl.uniform4fv(this.programs.pbr.uniforms.uBaseColor, material.baseColorFactor)
     gl.uniform1f(this.programs.pbr.uniforms.uMetallicFactor, material.metallicFactor)
     gl.uniform1f(this.programs.pbr.uniforms.uRoughnessFactor, material.roughnessFactor)
 
+    let texture, glTexture, glSampler
+
     if (material.baseColorTexture !== null) {
       texture = material.baseColorTexture
       glTexture = this.glObjects.get(texture.image)
       glSampler = this.glObjects.get(texture.sampler)
 
-      //gl.bindVertexArray(vao)
-      //gl.bindVertexArray(gl.createVertexArray())
       gl.activeTexture(gl.TEXTURE0)
       gl.bindTexture(gl.TEXTURE_2D, glTexture)
       gl.bindSampler(0, glSampler)
@@ -484,8 +484,6 @@ export class Renderer {
       glTexture = this.glObjects.get(texture.image)
       glSampler = this.glObjects.get(texture.sampler)
 
-      //gl.bindVertexArray(vao)
-      //gl.bindVertexArray(gl.createVertexArray())
       gl.activeTexture(gl.TEXTURE1)
       gl.bindTexture(gl.TEXTURE_2D, glTexture)
       gl.bindSampler(1, glSampler)
@@ -501,8 +499,6 @@ export class Renderer {
       glTexture = this.glObjects.get(texture.image)
       glSampler = this.glObjects.get(texture.sampler)
 
-      //gl.bindVertexArray(vao)
-      //gl.bindVertexArray(gl.createVertexArray())
       gl.activeTexture(gl.TEXTURE2)
       gl.bindTexture(gl.TEXTURE_2D, glTexture)
       gl.bindSampler(2, glSampler)
@@ -518,8 +514,6 @@ export class Renderer {
       glTexture = this.glObjects.get(texture.image)
       glSampler = this.glObjects.get(texture.sampler)
 
-      //gl.bindVertexArray(vao)
-      //gl.bindVertexArray(gl.createVertexArray())
       gl.activeTexture(gl.TEXTURE3)
       gl.bindTexture(gl.TEXTURE_2D, glTexture)
       gl.bindSampler(3, glSampler)
@@ -534,8 +528,6 @@ export class Renderer {
       glTexture = this.glObjects.get(texture.image)
       glSampler = this.glObjects.get(texture.sampler)
 
-      //gl.bindVertexArray(vao)
-      //gl.bindVertexArray(gl.createVertexArray())
       gl.activeTexture(gl.TEXTURE4)
       gl.bindTexture(gl.TEXTURE_2D, glTexture)
       gl.bindSampler(4, glSampler)
@@ -558,7 +550,6 @@ export class Renderer {
       const count = primitive.attributes.POSITION.count
       gl.drawArrays(mode, 0, count)
     }
-    //gl.bindVertexArray(null)
   }
 
 }

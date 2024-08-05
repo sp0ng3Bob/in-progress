@@ -40,18 +40,18 @@ export class Skin {
 
     // If there is a parent transform, multiply it with the current joint's matrix
     if (parentMatrix || joint.parent?.matrix) {
-      mat4.mul(jointMatrix, parentMatrix ?? joint.parent.matrix, joint.matrix);
+      mat4.mul(jointMatrix, parentMatrix ?? joint.parent.matrix, joint.matrix)
     } else {
-      mat4.copy(jointMatrix, joint.matrix);
+      mat4.copy(jointMatrix, joint.matrix)
     }
 
     // Apply the inverse bind matrix
-    mat4.mul(jointMatrix, jointMatrix, this.inverseBindMatrices[i]);
+    mat4.mul(jointMatrix, jointMatrix, this.inverseBindMatrices[i])
 
     // Recursively update child joints
     joint.children.forEach(childNode => {
-      this.updateJointMatrices(i, childNode, jointMatrix);
-    });
+      this.updateJointMatrices(i, childNode, jointMatrix)
+    })
 
     /*const worldInverse = mat4.invert(mat4.create(), joint.matrix)
     mat4.mul(jointMatrix, joint.matrix, this.inverseBindMatrices[i])
@@ -71,21 +71,21 @@ export class Skin {
 
   /*updateJointMatrices(i) {
     //for (let i = 0; i < this.joints.length; ++i) {
-    const jointMatrix = this.jointMatrices.subarray(i * 16, (i + 1) * 16);
-    const joint = this.joints[i];
+    const jointMatrix = this.jointMatrices.subarray(i * 16, (i + 1) * 16)
+    const joint = this.joints[i]
     // Get the joint's world transform
-    const worldTransform = joint.matrix;
+    const worldTransform = joint.matrix
 
-    //const inverseBindMatrix = new Float32Array(16);
+    //const inverseBindMatrix = new Float32Array(16)
     const inverseBindMatrix = new Float32Array(
       this.inverseBindMatrices.bufferView.buffer,
       this.inverseBindMatrices.byteOffset + this.inverseBindMatrices.bufferView.byteOffset + 16 * 4 * i,
       16
     )
     // Fetch the inverse bind matrix for this joint
-    //this.gltf.getMatrixFromAccessor(this.inverseBindMatrices, i, inverseBindMatrix);
+    //this.gltf.getMatrixFromAccessor(this.inverseBindMatrices, i, inverseBindMatrix)
     // Multiply world transform with the inverse bind matrix
-    mat4.multiply(jointMatrix, worldTransform, inverseBindMatrix);
+    mat4.multiply(jointMatrix, worldTransform, inverseBindMatrix)
     return jointMatrix
     //}
   }*/
@@ -95,7 +95,7 @@ export class Skin {
   }*/
 
   /*setUniforms(gl, program) {
-    gl.uniformMatrix4fv(program.uniforms["JointMatrix.matrix"], false, this.jointMatrices);
+    gl.uniformMatrix4fv(program.uniforms["JointMatrix.matrix"], false, this.jointMatrices)
   }*/
 
 }

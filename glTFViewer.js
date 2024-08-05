@@ -147,8 +147,9 @@ export class App extends Application {
           scaleX: 1,
           scaleY: 1
         },
-        innerHole: 0.2,
+        innerHole: 0.2, //tube's radius size
       },
+      deleteLastGeoOfType: "Any",
 
       //Globals
       lookingAt: "0, 0, 0",
@@ -316,21 +317,24 @@ export class App extends Application {
     this.geometryActions.push([addPlaneAction, addCubeAction, addSphereAction, addTorusAction])
 
     const geoSize = addGeoFolder.add(this.state.newGeoObject, "size", 1, 10, 0.1).name("Size").listen()
-    const geoInnerHole = addGeoFolder.add(this.state.newGeoObject, "innerHole", 0.1, 5, 0.1).name("Inner radius").listen()
+    const geoInnerHole = addGeoFolder.add(this.state.newGeoObject, "innerHole", 0.1, 2.5, 0.1).name("Tube radius").listen()
     const geoPosition = addGeoFolder.add(this.state.newGeoObject, "position").name("Position").listen()
     const geoRotation = addGeoFolder.add(this.state.newGeoObject, "rotation").name("Rotation").listen()
     const geoColor = addGeoFolder.addColor(this.state.newGeoObject, "color").name("Base color").listen()
     const geoUV = addGeoFolder.add(this.state.newGeoObject, "texture").name("Texture").listen()
-    addGeoFolder.add(this.state.newGeoObject.textureMapping, 'mapping', ['UV', 'Planar', 'Cylindrical', 'Spherical']).onChange(this.updateMapping);
-    addGeoFolder.add(this.state.newGeoObject.textureMapping, 'translateX', -1, 1).onChange(this.updateUVs);
-    addGeoFolder.add(this.state.newGeoObject.textureMapping, 'translateY', -1, 1).onChange(this.updateUVs);
-    addGeoFolder.add(this.state.newGeoObject.textureMapping, 'rotate', 0, Math.PI * 2).onChange(this.updateUVs);
-    addGeoFolder.add(this.state.newGeoObject.textureMapping, 'scaleX', 0.1, 2).onChange(this.updateUVs);
-    addGeoFolder.add(this.state.newGeoObject.textureMapping, 'scaleY', 0.1, 2).onChange(this.updateUVs);
+    addGeoFolder.add(this.state.newGeoObject.textureMapping, 'mapping', ['UV', 'Planar', 'Cylindrical', 'Spherical']).onChange(this.updateMapping)
+    addGeoFolder.add(this.state.newGeoObject.textureMapping, 'translateX', -1, 1).onChange(this.updateUVs)
+    addGeoFolder.add(this.state.newGeoObject.textureMapping, 'translateY', -1, 1).onChange(this.updateUVs)
+    addGeoFolder.add(this.state.newGeoObject.textureMapping, 'rotate', 0, Math.PI * 2).onChange(this.updateUVs)
+    addGeoFolder.add(this.state.newGeoObject.textureMapping, 'scaleX', 0.1, 2).onChange(this.updateUVs)
+    addGeoFolder.add(this.state.newGeoObject.textureMapping, 'scaleY', 0.1, 2).onChange(this.updateUVs)
     geoInnerHole.__li.style.display = "none"
     this.geometryActions.push([geoSize, geoPosition, geoRotation, geoColor, geoUV, geoInnerHole])
 
-    let geomListFolder = this.geometryFolder.addFolder("List of added geometries")
+    const geomListFolder = this.geometryFolder.addFolder("List of added geometries")
+    geomListFolder.add(this.state, 'deleteLastGeoOfType', ["Any", "Plane", "Cube", "Sphere", "Torus"]).listen().name("Geo type to remove")
+    const removeLastGeoButton = geomListFolder.add(this, "removeLastGeoNode").name("Remove lastly added geo model")
+    removeLastGeoButton.__li.classList.add("centered")
     //this.geometryFolder.domElement.style.display = "none"
 
     // Global controls.
@@ -533,35 +537,59 @@ export class App extends Application {
 
     proceduralModelsList.push(Geo.createTorus(this.gl, this.renderer.programs.pbr, size, innerHole, position, rotation, color, texture))
   }
+
+  removeLastGeoNode() {
+    const type = this.state.deleteLastGeoOfType
+
+    switch (type) {
+      case "Plane":
+      case "Cube":
+      case "Sphere":
+      case "Torus":
+        this.removeLatsGeoNodeOfType(type)
+        break
+      default:
+        proceduralModelsList.pop()
+    }
+  }
+
+  removeLatsGeoNodeOfType(type) {
+    for (let i = proceduralModelsList.length - 1; i >= 0; i--) {
+      if (proceduralModelsList[i].type === type) {
+        proceduralModelsList.splice(i, 1)
+        break
+      }
+    }
+  }
   /****************************************************************************************************************/
 
 
   /* TEXTURES */
   /*updateMapping() {
-    let uvs;
+    let uvs
     switch (params.mapping) {
       case 'Planar':
-        uvs = applyPlanarMapping(plane.positions);
-        break;
+        uvs = applyPlanarMapping(plane.positions)
+        break
       case 'Cylindrical':
-        uvs = applyCylindricalMapping(plane.positions);
-        break;
+        uvs = applyCylindricalMapping(plane.positions)
+        break
       case 'Spherical':
-        uvs = applySphericalMapping(plane.positions);
-        break;
+        uvs = applySphericalMapping(plane.positions)
+        break
       default:
-        uvs = getUVsFromModel(plane);
-        break;
+        uvs = getUVsFromModel(plane)
+        break
     }
-    setUVs(gl, plane, uvs);
+    setUVs(gl, plane, uvs)
   }
 
   updateUVs() {
-    let uvs = getCurrentUVs(gl, plane);
-    uvs = translateUVs(uvs, params.translateX, params.translateY);
-    uvs = rotateUVs(uvs, params.rotate);
-    uvs = scaleUVs(uvs, params.scaleX, params.scaleY);
-    setUVs(gl, plane, uvs);
+    let uvs = getCurrentUVs(gl, plane)
+    uvs = translateUVs(uvs, params.translateX, params.translateY)
+    uvs = rotateUVs(uvs, params.rotate)
+    uvs = scaleUVs(uvs, params.scaleX, params.scaleY)
+    setUVs(gl, plane, uvs)
   }*/
 
   changeWrappingS(val) {
@@ -635,7 +663,7 @@ export class App extends Application {
 
     this.renderer.prepareScene(this.scene)
 
-    this.setTextureStuff(this.scene.nodes)
+    //this.setTextureStuff(this.scene.nodes)
 
     if (this.scene.animations) {
       (Object.keys(this.state.animationsList) ?? []).forEach(key => delete this.state.animationsList[key])

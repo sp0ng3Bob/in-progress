@@ -25,10 +25,10 @@ export class PerspectiveCamera extends Camera {
       this.near, this.far)
 
     /*
-      a be the aspect ratio (width over height) of the field of view, set by camera.perspective.aspectRatio, or the aspect ratio of the viewport;
-      y be the vertical field of view in radians, set by camera.perspective.yfov;
+      a be the aspect ratio (width over height) of the field of view, set by camera.perspective.aspectRatio, or the aspect ratio of the viewport
+      y be the vertical field of view in radians, set by camera.perspective.yfov
       n be the distance to the near clipping plane, set by camera.perspective.znear.
-      f be the distance to the far clipping plane, set by camera.perspective.zfar;
+      f be the distance to the far clipping plane, set by camera.perspective.zfar
     */
     /*const perspective = mat4.create()
     const a = this.aspect

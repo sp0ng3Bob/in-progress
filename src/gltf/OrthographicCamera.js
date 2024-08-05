@@ -27,9 +27,9 @@ export class OrthographicCamera extends Camera {
       this.bottom, this.top,
       this.near, this.far)*/
     /*
-      r be half the orthographic width, set by camera.orthographic.xmag;
-      t be half the orthographic height, set by camera.orthographic.ymag;
-      f be the distance to the far clipping plane, set by camera.orthographic.zfar;
+      r be half the orthographic width, set by camera.orthographic.xmag
+      t be half the orthographic height, set by camera.orthographic.ymag
+      f be the distance to the far clipping plane, set by camera.orthographic.zfar
       n be the distance to the near clipping plane, set by camera.orthographic.znear.
     */
     const orthographic = mat4.create()

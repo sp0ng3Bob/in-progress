@@ -1,5 +1,3 @@
-//import { mat4 } from 'gl-matrix'
-
 export class AnimationsPlayer {
 
   constructor() {
@@ -18,7 +16,6 @@ export class AnimationsPlayer {
     this.animationsCount = this.animations.length
     this.animationsDuration = this.animations.reduce((max, anim) => {
       return Math.max(max, anim.duration)
-      //return Math.max(max, anim.duration * anim.maxCycles);
     }, 0)
   }
 
@@ -31,7 +28,7 @@ export class AnimationsPlayer {
   }
 
   getCurrentTime() {
-    return this.currentTime % this.animationsDuration || 0 //this.animations[0].duration
+    return this.currentTime % this.animationsDuration || 0
   }
 
   play() {
@@ -55,7 +52,7 @@ export class AnimationsPlayer {
     if (!this.isPlaying) return
 
     for (const animationIndex of this.animationsToPlay.keys()) {
-      this.animations[animationIndex].update(this.currentTime) //this.getCurrentTime())
+      this.animations[animationIndex].update(this.currentTime)
     }
 
     this.currentTime += deltaTime
