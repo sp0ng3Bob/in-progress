@@ -36,7 +36,7 @@ document.addEventListener("DOMContentLoaded", () => {
   })
   canvas.addEventListener("touchstart", e => {
     if (app.freeCamera == app.state.selectedCamera || forAllCameras) {
-      app.controls.onDragStart(e)
+      app.controls.onDragStart(e, app.camera)
     }
   })
   canvas.addEventListener("touchmove", e => {

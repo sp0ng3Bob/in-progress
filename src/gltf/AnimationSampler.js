@@ -137,7 +137,7 @@ export class AnimationSampler {
   interpolateValue(a, b, t, cubeSplineData) {
     switch (this.interpolation) {
       case "STEP":
-        return a
+        return b // IDU
       case "LINEAR":
         if (this.dim === quat) { //rotation -> quaternions
           return this.slerp(a, b, t)

@@ -316,18 +316,18 @@ export class App extends Application {
     addTorusAction.__li.style.display = "none"
     this.geometryActions.push([addPlaneAction, addCubeAction, addSphereAction, addTorusAction])
 
-    const geoSize = addGeoFolder.add(this.state.newGeoObject, "size", 1, 10, 0.1).name("Size").listen()
+    const geoSize = addGeoFolder.add(this.state.newGeoObject, "size", 0.5, 10, 0.1).name("Size").listen()
     const geoInnerHole = addGeoFolder.add(this.state.newGeoObject, "innerHole", 0.1, 2.5, 0.1).name("Tube radius").listen()
     const geoPosition = addGeoFolder.add(this.state.newGeoObject, "position").name("Position").listen()
     const geoRotation = addGeoFolder.add(this.state.newGeoObject, "rotation").name("Rotation").listen()
     const geoColor = addGeoFolder.addColor(this.state.newGeoObject, "color").name("Base color").listen()
     const geoUV = addGeoFolder.add(this.state.newGeoObject, "texture").name("Texture").listen()
     addGeoFolder.add(this.state.newGeoObject.textureMapping, 'mapping', ['UV', 'Planar', 'Cylindrical', 'Spherical']).onChange(this.updateMapping)
-    addGeoFolder.add(this.state.newGeoObject.textureMapping, 'translateX', -1, 1).onChange(this.updateUVs)
-    addGeoFolder.add(this.state.newGeoObject.textureMapping, 'translateY', -1, 1).onChange(this.updateUVs)
-    addGeoFolder.add(this.state.newGeoObject.textureMapping, 'rotate', 0, Math.PI * 2).onChange(this.updateUVs)
-    addGeoFolder.add(this.state.newGeoObject.textureMapping, 'scaleX', 0.1, 2).onChange(this.updateUVs)
-    addGeoFolder.add(this.state.newGeoObject.textureMapping, 'scaleY', 0.1, 2).onChange(this.updateUVs)
+    //addGeoFolder.add(this.state.newGeoObject.textureMapping, 'translateX', -1, 1).onChange(this.updateUVs)
+    //addGeoFolder.add(this.state.newGeoObject.textureMapping, 'translateY', -1, 1).onChange(this.updateUVs)
+    //addGeoFolder.add(this.state.newGeoObject.textureMapping, 'rotate', 0, Math.PI * 2).onChange(this.updateUVs)
+    //addGeoFolder.add(this.state.newGeoObject.textureMapping, 'scaleX', 0.1, 2).onChange(this.updateUVs)
+    //addGeoFolder.add(this.state.newGeoObject.textureMapping, 'scaleY', 0.1, 2).onChange(this.updateUVs)
     geoInnerHole.__li.style.display = "none"
     this.geometryActions.push([geoSize, geoPosition, geoRotation, geoColor, geoUV, geoInnerHole])
 
@@ -499,7 +499,7 @@ export class App extends Application {
   addGeoPlane() {
     const size = this.state.newGeoObject.size
     const position = this.state.newGeoObject.position.split(",").map(Number)
-    const rotation = this.state.newGeoObject.rotation //lolll
+    const rotation = this.state.newGeoObject.rotation.split(",").map(Number)
     const color = this.state.newGeoObject.color
     const texture = this.state.newGeoObject.texture
     const textureMappingOptions = this.state.newGeoObject.textureMapping
@@ -510,7 +510,7 @@ export class App extends Application {
   addGeoCube() {
     const size = this.state.newGeoObject.size
     const position = this.state.newGeoObject.position.split(",").map(Number)
-    const rotation = this.state.newGeoObject.rotation
+    const rotation = this.state.newGeoObject.rotation.split(",").map(Number)
     const color = this.state.newGeoObject.color
     const texture = this.state.newGeoObject.texture
 
@@ -520,7 +520,7 @@ export class App extends Application {
   addGeoSphere() {
     const size = this.state.newGeoObject.size
     const position = this.state.newGeoObject.position.split(",").map(Number)
-    const rotation = this.state.newGeoObject.rotation
+    const rotation = this.state.newGeoObject.rotation.split(",").map(Number)
     const color = this.state.newGeoObject.color
     const texture = this.state.newGeoObject.texture
 
@@ -530,7 +530,7 @@ export class App extends Application {
   addGeoTorus() {
     const size = this.state.newGeoObject.size
     const position = this.state.newGeoObject.position.split(",").map(Number)
-    const rotation = this.state.newGeoObject.rotation
+    const rotation = this.state.newGeoObject.rotation.split(",").map(Number)
     const color = this.state.newGeoObject.color
     const texture = this.state.newGeoObject.texture
     const innerHole = this.state.newGeoObject.innerHole

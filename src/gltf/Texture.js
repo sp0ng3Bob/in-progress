@@ -5,7 +5,7 @@ export class Texture {
   constructor(options = {}) {
     this.image = options.image ?? null
     this.sampler = options.sampler ?? new Sampler()
-    this.hasMipmaps = false
+    this.hasMipmaps = false //idk
   }
   /*constructor(gl, textureInfo, images) {
       this.gl = gl

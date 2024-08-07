@@ -32,8 +32,9 @@ function createAndBindBuffer(gl, data, attribute = undefined, target = undefined
   return buffer
 }
 
-function prepareBuffers(gl, program, bufferData) {
+function prepareBuffers(gl, program, bufferData, color, textureImage) {
   const { positions, normals, indices, uvs } = bufferData
+
   const vao = gl.createVertexArray()
   gl.bindVertexArray(vao)
 
@@ -42,33 +43,27 @@ function prepareBuffers(gl, program, bufferData) {
   const indexBuffer = createAndBindBuffer(gl, indices, null, gl.ELEMENT_ARRAY_BUFFER)
   const uvBuffer = createAndBindBuffer(gl, uvs, { attr: program.attributes.aTexCoord, size: 2, type: gl.FLOAT })
 
+  const texture = setUpTexture(gl, textureImage)
+  const sampler = WebGL.createSampler(gl, { wrapS: gl.REPEAT, wrapT: gl.REPEAT, min: gl.NEAREST_MIPMAP_LINEAR, mag: gl.LINEAR })
+  const baseColor = getNormalisedRGB(color)
+
   return {
     indexCount: indices.length,
     vao,
+    texture,
+    sampler,
+    baseColor,
   }
 }
 
 function applyTransformations(positions, T, R) {
-  //const transformMatrix = mat3.create()
-  //mat3.translate(transformMatrix, transformMatrix, T)
-
-  //const rotationMatrix = mat3.create()
-  //mat3.fromQuat(rotationMatrix, R)
-  //mat3.multiply(transformMatrix, rotationMatrix, transformMatrix) //rotationMatrix, transformMatrix
-
-  const transformMatrix = mat4.create() // Use mat4 for proper 3D transformations
-
-  // Apply translation
-  mat4.translate(transformMatrix, transformMatrix, T)
-
-  // Apply rotation
-  //mat4.fromQuat(transformMatrix, R, transformMatrix)
+  const transformMatrix = mat4.create()
+  mat4.fromRotationTranslationScale(transformMatrix, R, T, [1, 1, 1])
 
   const transformedPositions = []
   for (let i = 0; i < positions.length; i += 3) {
     const vertex = vec3.fromValues(positions[i], positions[i + 1], positions[i + 2])
     vec3.transformMat4(vertex, vertex, transformMatrix)
-    //vec3.transformMat3(vertex, vertex, transformMatrix)
     transformedPositions.push(...vertex)
   }
 
@@ -188,7 +183,6 @@ function createSphereGeometry(radius = 1, position = [0, 0, 0], rotation = [0, 0
       const y = cosTheta
       const z = sinPhi * sinTheta
 
-      //positions.push(radius * x + position[0], radius * y + position[1], radius * z + position[2])
       positions.push(radius * x, radius * y, radius * z)
       normals.push(x, y, z)
       uvs.push(lon / longBands, 1 - lat / latBands)
@@ -274,7 +268,15 @@ function setUpTexture(gl, textureImage) {
   if (textureImage != "") {
     fetchImage(new URL(textureImage, window.location))
       .then(image => {
-        return WebGL.createTexture(gl, { image, mip: true, wrapS: gl.REPEAT, wrapT: gl.REPEAT, min: gl.NEAREST_MIPMAP_LINEAR, mag: gl.LINEAR })
+        const texture = WebGL.createTexture(gl, { image, mip: true, wrapS: gl.REPEAT, wrapT: gl.REPEAT, min: gl.NEAREST_MIPMAP_LINEAR, mag: gl.LINEAR })
+
+        /*if (gl.isTexture(texture)) {
+          console.log('Texture is valid and loaded');
+        } else {
+          console.error('Failed to load texture');
+        }*/
+
+        return texture
       })
       .catch(error => {
         console.error('Error loading image:', error)
@@ -287,11 +289,7 @@ function setUpTexture(gl, textureImage) {
 export function createPlane(gl, program, size, position, rotation, color, textureImage, textureMappings) {
   const bufferData = createPlaneGeometry(size, position, rotation)
   bufferData.uvs = updateMapping(gl, bufferData, textureMappings)
-  const outModel = prepareBuffers(gl, program, bufferData)
-
-  outModel.texture = setUpTexture(gl, textureImage)
-  outModel.sampler = WebGL.createSampler(gl, { wrapS: gl.REPEAT, wrapT: gl.REPEAT, min: gl.NEAREST_MIPMAP_LINEAR, mag: gl.LINEAR })
-  outModel.baseColor = getNormalisedRGB(color)
+  const outModel = prepareBuffers(gl, program, bufferData, color, textureImage)
   outModel.type = "Plane"
   return outModel
 }
@@ -302,33 +300,21 @@ export function createPlane(gl, program, size, position, rotation, color, textur
 
 export function createCube(gl, program, size, position, rotation, color, textureImage) {
   const bufferData = createCubeGeometry(size, position, rotation)
-  const outModel = prepareBuffers(gl, program, bufferData)
-
-  outModel.texture = setUpTexture(gl, textureImage)
-  outModel.sampler = WebGL.createSampler(gl, { wrapS: gl.REPEAT, wrapT: gl.REPEAT, min: gl.NEAREST_MIPMAP_LINEAR, mag: gl.LINEAR })
-  outModel.baseColor = getNormalisedRGB(color)
+  const outModel = prepareBuffers(gl, program, bufferData, color, textureImage)
   outModel.type = "Cube"
   return outModel
 }
 
 export function createSphere(gl, program, radius, position, rotation, color, textureImage) {
   const bufferData = createSphereGeometry(radius, position, rotation)
-  const outModel = prepareBuffers(gl, program, bufferData)
-
-  outModel.texture = setUpTexture(gl, textureImage)
-  outModel.sampler = WebGL.createSampler(gl, { wrapS: gl.REPEAT, wrapT: gl.REPEAT, min: gl.NEAREST_MIPMAP_LINEAR, mag: gl.LINEAR })
-  outModel.baseColor = getNormalisedRGB(color)
+  const outModel = prepareBuffers(gl, program, bufferData, color, textureImage)
   outModel.type = "Sphere"
   return outModel
 }
 
 export function createTorus(gl, program, radius, holeRadius, position, rotation, color, textureImage) {
   const bufferData = createTorusGeometry(radius, holeRadius, position, rotation)
-  const outModel = prepareBuffers(gl, program, bufferData)
-
-  outModel.texture = setUpTexture(gl, textureImage)
-  outModel.sampler = WebGL.createSampler(gl, { wrapS: gl.REPEAT, wrapT: gl.REPEAT, min: gl.NEAREST_MIPMAP_LINEAR, mag: gl.LINEAR })
-  outModel.baseColor = getNormalisedRGB(color)
+  const outModel = prepareBuffers(gl, program, bufferData, color, textureImage)
   outModel.type = "Torus"
   return outModel
 }

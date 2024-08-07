@@ -94,22 +94,16 @@ function setUVBuffer(gl, model, newUVs) {
   - https://stackoverflow.com/questions/30960403/multitexturing-theory-with-texture-objects-and-samplers
 */
 export function updateMapping(gl, model, options) {
-  let uvs
   switch (options.mapping) {
     case 'Planar':
-      uvs = calculatePlanarMapping(model.positions)
-      break
+      return calculatePlanarMapping(model.positions)
     case 'Cylindrical':
-      uvs = calculateCylindricalMapping(model.positions)
-      break
+      return calculateCylindricalMapping(model.positions)
     case 'Spherical':
-      uvs = calculateSphericalMapping(model.positions)
-      break
+      return calculateSphericalMapping(model.positions)
     default:
-      uvs = model.uvs //getUVFromGeoModel(model)
-      break
+      return model.uvs //getUVFromGeoModel(model)
   }
-  return uvs //updateUVs(gl, model, uvs)
 }
 
 function updateUVs(gl, model, options) {
@@ -124,6 +118,7 @@ function updateUVs(gl, model, options) {
 export function fetchImage(url) {
   return new Promise((resolve, reject) => {
     const image = new Image()
+    image.crossOrigin = "Anonymous"
     image.addEventListener('load', e => resolve(image))
     image.addEventListener('error', reject)
     image.src = url

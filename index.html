@@ -2,42 +2,51 @@
 
 	COORDINATE AXES: -> CANVAS
 	(1) Display a scene with default coordinate axes, where each axis is colored 
-	(x-axis in red, y-axis in green, z-axis in blue).
+	(x-axis in red, y-axis in green, z-axis in blue). 
+    Q- DONE
 
 	LOAD MODEL AND MODEL CONTROLS: -> MODEL 
 	(2) Load 3D models in glTF 2.0 format and position them in space 
-	(with options for translation, rotation, and scaling).
+	(with options for translation, rotation, and scaling). 
+    Q- position in space missing
 
 	MODEL PROPERTIES: -> MODEL
-	(3) Display model properties: number of vertices, number of indices, and the size of the bounding box.
+	(3) Display model properties: number of vertices, number of indices, and the size of the bounding box. 
+    Q- DONE
 
 	PROCEDURAL GEOMETRIES: -> PROCEDURAL GEOMETRY
-	(4) Add procedurally generated objects (plane, cube, sphere, torus).
+	(4) Add procedurally generated objects (plane, cube, sphere, torus). 
+    Q- DONE
 
 	CAMERA CONTROLS: -> CAMERAS
 	(5) Allow camera position and rotation control using mouse or keyboard input, 
-	with the ability to change the camera's focal point.
+	with the ability to change the camera's focal point. 
+    Q- ne dela lih najbolj pravilno
 
 	LIGHTS: -> LIGHTS
 	(6) Place point lights in the scene, with adjustable parameters for color, 
-	intensity, and attenuation (constant, linear, quadratic attenuation).
+	intensity, and attenuation (constant, linear, quadratic attenuation). 
+    Q- TODO
 	(7) Define the lighting model (Lambert and Phong) and shading parameters 
-	(diffuse and specular color, shininess) for each object.
+	(diffuse and specular color, shininess) for each object. 
+    Q- TODO
 
 	FRAGMENT SHADER: ->
-	(8) Implement per-fragment lighting and shading calculations.
+	(8) Implement per-fragment lighting and shading calculations. 
+    Q- TODO
 
 	TEXTURES: -> MODEL.TEXTURES
 	(9) Assign textures to each object individually, with options for 
 	texture coordinate mapping (input file coordinates, planar mapping, 
 	cylindrical mapping, spherical mapping), and allow translation, rotation, 
-	scaling, and projection direction for UV coordinates.
+	scaling, and projection direction for UV coordinates. 
+    Q- ne pokaže teksture, ampak vse drugo je že v kodi
 
 	GLOBALS:
 	(10) Provide a global setting to control texture wrapping modes (CLAMP_TO_EDGE, REPEAT, MIRRORED_REPEAT).
 	(11) Provide a global setting to control texture filtering modes (NEAREST, LINEAR) and mipmapping options.
 	(12) Allow global enabling and disabling of mipmaps.
-
+    Q- ne razumem točno, kaj to kao povozi vse druge samplerje in teksture v sceni, al kaj?
 -->
 
 <!--
@@ -87,9 +96,11 @@ Then at render time
 </head>
 
 <body>
+
   <div class="Fullscreen">
     <canvas id="mainCanvas"></canvas>
   </div>
+
   <div class="Logs">
     <span>
       [CAMERA POSITION:
@@ -107,6 +118,9 @@ Then at render time
       seconds]
     </span>
   </div>
+
+  <!-- <input type="file" id="localFile" accept=".png, .jpg, .jpeg">
+  <img id="image" alt="Local file for loading textures" style="display:none; max-width: 100%;"> -->
 </body>
 
 </html>

@@ -10,7 +10,14 @@ export class Controls {
     this.zoomFactor = Math.PI / 100
     this.isDragging = false
     this.startPosition = { x: 0, y: 0 }
+
+    //mobile shiet
+    this.initialPinchDistance = null
+    this.lastPinchDistance = null
+    this.lastTapTime = 0;
+    this.doubleTapZoomOutFactor = 1.5;
     this.onTouchDevice = window.matchMedia("(pointer: coarse)").matches
+
     this.rotationQuat = quat.create() // Initialize a quaternion for cameras rotation
     this.positionVec = vec3.create()
 
@@ -20,8 +27,26 @@ export class Controls {
     this.thetaIncrement = 0.5 //1
   }
 
-  onDragStart(e) {
-    if (this.onTouchDevice && e.touches.length !== 1) return
+  zoomOut(camera) {
+    const zoomSpeed = 0.2; // Adjust the zoom speed as needed
+    //if (Math.abs(camera.translation[2] - zoomSpeed * this.zoomFactor) > 0.01) {
+    const sign = camera.translation[2] < 0 ? -1 : 1
+    camera.translation[2] += sign * zoomSpeed * this.zoomFactor
+    camera.updateMatrix()
+    //}
+  }
+
+  onDragStart(e, camera) {
+    if (this.onTouchDevice && e?.touches?.length !== 1) return
+
+    const currentTime = new Date().getTime()
+    const tapGap = currentTime - this.lastTapTime
+
+    if (tapGap > 0 && tapGap < 300) {
+      this.zoomOut(camera)
+    }
+
+    this.lastTapTime = currentTime
 
     this.isDragging = true
     const x = this.onTouchDevice ? e.touches[0].clientX : e.clientX
@@ -33,58 +58,91 @@ export class Controls {
   }
 
   onDrag(e, camera) {
-    if (this.onTouchDevice && e.touches.length !== 1) return
+    if (this.onTouchDevice && e?.touches?.length !== 1) {
+      //e.preventDefault()
+      this.processScrollWheel(e, camera)
+    } else {
+      if (this.isDragging) {
+        const dx = (this.onTouchDevice ? e.touches[0].clientX : e.clientX) - this.startPosition.x
+        const dy = (this.onTouchDevice ? e.touches[0].clientY : e.clientY) - this.startPosition.y
 
-    if (this.isDragging) {
-      const dx = (this.onTouchDevice ? e.touches[0].clientX : e.clientX) - this.startPosition.x
-      const dy = (this.onTouchDevice ? e.touches[0].clientY : e.clientY) - this.startPosition.y
+        // Compute a rotation quaternion based on mouse movement
+        quat.rotateY(this.rotationQuat, this.rotationQuat, dy * this.zoomFactor * 0.01)
+        quat.rotateX(this.rotationQuat, this.rotationQuat, dx * this.zoomFactor * 0.01)
 
-      // Compute a rotation quaternion based on mouse movement
-      quat.rotateY(this.rotationQuat, this.rotationQuat, dy * this.zoomFactor * 0.01)
-      quat.rotateX(this.rotationQuat, this.rotationQuat, dx * this.zoomFactor * 0.01)
+        // Apply the rotation to the camera's quaternion
+        quat.multiply(camera.rotation, this.rotationQuat, camera.rotation)
+        quat.normalize(camera.rotation, camera.rotation)
 
-      // Apply the rotation to the camera's quaternion
-      quat.multiply(camera.rotation, this.rotationQuat, camera.rotation)
-      quat.normalize(camera.rotation, camera.rotation)
+        // Update camera matrix
+        camera.updateMatrix()
 
-      // Update camera matrix
-      camera.updateMatrix()
-
-      const x = this.onTouchDevice ? e.touches[0].clientX : e.clientX
-      const y = this.onTouchDevice ? e.touches[0].clientY : e.clientY
-      this.startPosition = { x, y }
+        const x = this.onTouchDevice ? e.touches[0].clientX : e.clientX
+        const y = this.onTouchDevice ? e.touches[0].clientY : e.clientY
+        this.startPosition = { x, y }
+      }
     }
   }
 
   onDragEnd() {
     this.isDragging = false
+    this.initialPinchDistance = null
+    this.lastPinchDistance = null
   }
 
   setZoom(zoom) {
     this.zoomFactor = zoom
   }
 
+  //processZoomOnMobile(e)
+
   processScrollWheel(e, camera) {
-    //e.preventDefault()
-    //console.log()
     let zoomSpeed = 0.01
     if (e.shiftKey) { zoomSpeed = 0.1 }
 
-    /*const delta = e.deltaY * zoomSpeed * this.zoomFactor
-    const newTranslationZ = this.camera.translation[2] + delta
+    if (this.onTouchDevice && e?.touches?.length === 2) {
+      // Process touch pinch
+      const touch1 = e.touches[0]
+      const touch2 = e.touches[1]
 
-    // Ensure that translation[2] moves towards zero without crossing it
-    if ((this.camera.translation[2] > 0 && newTranslationZ >= 0) || (this.camera.translation[2] < 0 && newTranslationZ <= 0)) {
-      this.camera.translation[2] = newTranslationZ
+      const dx = touch2.clientX - touch1.clientX
+      const dy = touch2.clientY - touch1.clientY
+      const distance = Math.sqrt(dx * dx + dy * dy)
+
+      if (this.initialPinchDistance) {
+        const pinchDelta = distance - this.lastPinchDistance
+
+        if (Math.abs(camera.translation[2] + pinchDelta * zoomSpeed * this.zoomFactor) > 0.01) {
+          camera.translation[2] += pinchDelta * zoomSpeed * this.zoomFactor
+          camera.updateMatrix()
+        }
+
+        this.lastPinchDistance = distance
+      } else {
+        this.initialPinchDistance = distance
+        this.lastPinchDistance = distance
+      }
     } else {
-      // If the new translation would cross zero, set it to zero
-      this.camera.translation[2] = 0
-    }*/
+      //e.preventDefault()
+      //console.log()
 
-    if (Math.abs(camera.translation[2] + e.deltaY * zoomSpeed * this.zoomFactor) > 0.01) {
-      camera.translation[2] += e.deltaY * zoomSpeed * this.zoomFactor //e.deltaY * this.zoomFactor
-      camera.updateMatrix()
+      /*const delta = e.deltaY * zoomSpeed * this.zoomFactor
+      const newTranslationZ = this.camera.translation[2] + delta
+  
+      // Ensure that translation[2] moves towards zero without crossing it
+      if ((this.camera.translation[2] > 0 && newTranslationZ >= 0) || (this.camera.translation[2] < 0 && newTranslationZ <= 0)) {
+        this.camera.translation[2] = newTranslationZ
+      } else {
+        // If the new translation would cross zero, set it to zero
+        this.camera.translation[2] = 0
+      }*/
+
+      if (Math.abs(camera.translation[2] + e.deltaY * zoomSpeed * this.zoomFactor) > 0.01) {
+        camera.translation[2] += e.deltaY * zoomSpeed * this.zoomFactor //e.deltaY * this.zoomFactor
+        camera.updateMatrix()
+      }
     }
+
   }
 
   /* KEYBOARD INPUTS */
