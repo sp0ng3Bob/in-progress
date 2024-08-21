@@ -92,6 +92,16 @@ function setUVBuffer(gl, model, newUVs) {
   - https://webgl2fundamentals.org/webgl/lessons/webgl-data-textures.html
   - https://webgl2fundamentals.org/webgl/lessons/webgl-2-textures.html
   - https://stackoverflow.com/questions/30960403/multitexturing-theory-with-texture-objects-and-samplers
+
+  - https://stackoverflow.com/questions/29577205/opengl-glgeneratemipmap-before-loading-texture-data
+  [ glGenerateMipmap() takes the current content of the base level image (where the base level is the 
+  level set as GL_TEXTURE_BASE_LEVEL, 0 by default), and generates all the mipmap levels from base 
+  level + 1 to the maximum level.
+
+  This means that glGenerateMipmap() has no effect on future calls to glTexImage2D(). 
+  If you want your mipmaps to be updated after modifying the texture data with calls like 
+  glTexImage2D() or glTexSubImage2D(), you have to call glGenerateMipmap() again. ]
+
 */
 export function updateMapping(gl, model, options) {
   switch (options.mapping) {

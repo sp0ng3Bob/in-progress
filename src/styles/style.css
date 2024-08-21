@@ -43,6 +43,10 @@ html {
   /*text-shadow: 2px -3px 5px #696969a0;*/
 }
 
+.hidden {
+  display: none !important;
+}
+
 /* dat.GUI CSS helpers */
 /* Class for bg colors of folders */
 .green {

@@ -34,19 +34,21 @@
 	FRAGMENT SHADER: ->
 	(8) Implement per-fragment lighting and shading calculations. 
     Q- TODO
+    //https://github.com/KhronosGroup/glTF-Sample-Renderer/blob/74ac656068acda7b5cd96b6c4d977e27466a8832/source/Renderer/shaders/primitive.vert
+    //https://github.com/KhronosGroup/glTF-Sample-Renderer/blob/74ac656068acda7b5cd96b6c4d977e27466a8832/source/Renderer/shaders/pbr.frag
 
 	TEXTURES: -> MODEL.TEXTURES
 	(9) Assign textures to each object individually, with options for 
 	texture coordinate mapping (input file coordinates, planar mapping, 
 	cylindrical mapping, spherical mapping), and allow translation, rotation, 
 	scaling, and projection direction for UV coordinates. 
-    Q- ne pokaže teksture, ampak vse drugo je že v kodi
+    Q- ne pokaže teksture, ampak vse drugo je že v kodi, ni projection directiona
 
 	GLOBALS:
 	(10) Provide a global setting to control texture wrapping modes (CLAMP_TO_EDGE, REPEAT, MIRRORED_REPEAT).
 	(11) Provide a global setting to control texture filtering modes (NEAREST, LINEAR) and mipmapping options.
 	(12) Allow global enabling and disabling of mipmaps.
-    Q- ne razumem točno, kaj to kao povozi vse druge samplerje in teksture v sceni, al kaj?
+    Q- ne razumem točno; kaj to kao povozi vse druge samplerje in teksture v sceni, al kaj?
 -->
 
 <!--

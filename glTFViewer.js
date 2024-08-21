@@ -103,6 +103,7 @@ export class App extends Application {
       // Canvas
       axesShown: true,
       backgroundColor: [255, 255, 255],
+      showLogs: true,
 
       // Lights
       addLightColor: [255, 255, 180],
@@ -167,6 +168,8 @@ export class App extends Application {
       //mvpMatrix: this.camera.camera.matrix
     })
 
+    this.logs = logsDOMElement
+
     // glTF animations player
     this.animationsPlayer = new AnimationsPlayer()
     this.frameCount = 1
@@ -212,6 +215,7 @@ export class App extends Application {
     const canvasFolder = gui.addFolder("Canvas options")
     const axesHelper = canvasFolder.add(this.state, "axesShown") //.listen() //.onChange(this.toggleAxesInScene)
     const bgColor = canvasFolder.addColor(this.state, "backgroundColor").onChange(this.setClearColor.bind(this))
+    const logs = canvasFolder.add(this.state, "showLogs").onChange(this.toggleLogs.bind(this))
 
     // Models controls.
     /* (2) Load 3D models in glTF 2.0 format and position them in space 
@@ -322,14 +326,20 @@ export class App extends Application {
     const geoRotation = addGeoFolder.add(this.state.newGeoObject, "rotation").name("Rotation").listen()
     const geoColor = addGeoFolder.addColor(this.state.newGeoObject, "color").name("Base color").listen()
     const geoUV = addGeoFolder.add(this.state.newGeoObject, "texture").name("Texture").listen()
-    addGeoFolder.add(this.state.newGeoObject.textureMapping, 'mapping', ['UV', 'Planar', 'Cylindrical', 'Spherical']).onChange(this.updateMapping)
-    //addGeoFolder.add(this.state.newGeoObject.textureMapping, 'translateX', -1, 1).onChange(this.updateUVs)
-    //addGeoFolder.add(this.state.newGeoObject.textureMapping, 'translateY', -1, 1).onChange(this.updateUVs)
-    //addGeoFolder.add(this.state.newGeoObject.textureMapping, 'rotate', 0, Math.PI * 2).onChange(this.updateUVs)
-    //addGeoFolder.add(this.state.newGeoObject.textureMapping, 'scaleX', 0.1, 2).onChange(this.updateUVs)
-    //addGeoFolder.add(this.state.newGeoObject.textureMapping, 'scaleY', 0.1, 2).onChange(this.updateUVs)
+    addGeoFolder.add(this.state.newGeoObject.textureMapping, 'mapping', ['UV', 'Planar', 'Cylindrical', 'Spherical']).listen().onChange(this.mappingChanged.bind(this))
+    const tx = addGeoFolder.add(this.state.newGeoObject.textureMapping, 'translateX', -1, 1).onChange(this.updateUVs)
+    const ty = addGeoFolder.add(this.state.newGeoObject.textureMapping, 'translateY', -1, 1).onChange(this.updateUVs)
+    const r = addGeoFolder.add(this.state.newGeoObject.textureMapping, 'rotate', 0, Math.PI * 2, 0.01).onChange(this.updateUVs)
+    const sx = addGeoFolder.add(this.state.newGeoObject.textureMapping, 'scaleX', 0.1, 2).onChange(this.updateUVs)
+    const sy = addGeoFolder.add(this.state.newGeoObject.textureMapping, 'scaleY', 0.1, 2).onChange(this.updateUVs)
     geoInnerHole.__li.style.display = "none"
+    tx.__li.style.display = "none"
+    ty.__li.style.display = "none"
+    r.__li.style.display = "none"
+    sx.__li.style.display = "none"
+    sy.__li.style.display = "none"
     this.geometryActions.push([geoSize, geoPosition, geoRotation, geoColor, geoUV, geoInnerHole])
+    this.geometryActions.push([tx, ty, r, sx, sy])
 
     const geomListFolder = this.geometryFolder.addFolder("List of added geometries")
     geomListFolder.add(this.state, 'deleteLastGeoOfType', ["Any", "Plane", "Cube", "Sphere", "Torus"]).listen().name("Geo type to remove")
@@ -463,7 +473,10 @@ export class App extends Application {
 
   setClearColor(color) {
     this.renderer.changeClearColor(color)
-    this.axes.changeClearColor(color)
+  }
+
+  toggleLogs() {
+    this.logs.classList.toggle("hidden")
   }
 
 
@@ -475,7 +488,6 @@ export class App extends Application {
 
 
   /* PROCEDURAL GEOMETRIES */
-
   selectGeoAction() {
     for (const index in this.geometryActions[0]) {
       if (index != this.state.newGeoObject.shape) {
@@ -565,32 +577,21 @@ export class App extends Application {
 
 
   /* TEXTURES */
-  /*updateMapping() {
-    let uvs
-    switch (params.mapping) {
-      case 'Planar':
-        uvs = applyPlanarMapping(plane.positions)
-        break
-      case 'Cylindrical':
-        uvs = applyCylindricalMapping(plane.positions)
-        break
-      case 'Spherical':
-        uvs = applySphericalMapping(plane.positions)
+  mappingChanged(value) {
+    switch (value) {
+      case "Planar":
+      case "Cylindrical":
+      case "Spherical":
+        for (let mappingTransform of this.geometryActions[2]) {
+          mappingTransform.__li.style.display = ""
+        }
         break
       default:
-        uvs = getUVsFromModel(plane)
-        break
+        for (let mappingTransform of this.geometryActions[2]) {
+          mappingTransform.__li.style.display = "none"
+        }
     }
-    setUVs(gl, plane, uvs)
   }
-
-  updateUVs() {
-    let uvs = getCurrentUVs(gl, plane)
-    uvs = translateUVs(uvs, params.translateX, params.translateY)
-    uvs = rotateUVs(uvs, params.rotate)
-    uvs = scaleUVs(uvs, params.scaleX, params.scaleY)
-    setUVs(gl, plane, uvs)
-  }*/
 
   changeWrappingS(val) {
     //this.renderer.wrappingModeS = parseInt(val, 10)

@@ -89,11 +89,11 @@ export class WebGL {
   }
 
   static setMipMaps(gl, target, options) {
+    if (options.mip) { gl.generateMipmap(target); }
     if (options.wrapS) { gl.texParameteri(target, gl.TEXTURE_WRAP_S, options.wrapS); }
     if (options.wrapT) { gl.texParameteri(target, gl.TEXTURE_WRAP_T, options.wrapT); }
     if (options.min) { gl.texParameteri(target, gl.TEXTURE_MIN_FILTER, options.min); }
     if (options.mag) { gl.texParameteri(target, gl.TEXTURE_MAG_FILTER, options.mag); }
-    if (options.mip) { gl.generateMipmap(target); }
   }
 
   static createBuffer(gl, options) {
