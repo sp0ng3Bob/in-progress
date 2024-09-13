@@ -103,26 +103,26 @@ function setUVBuffer(gl, model, newUVs) {
   glTexImage2D() or glTexSubImage2D(), you have to call glGenerateMipmap() again. ]
 
 */
-export function updateMapping(gl, model, options) {
+export function updateMapping(bufferData, options) {
+  if (!options?.mapping) { return bufferData.uvs }
+
   switch (options.mapping) {
     case 'Planar':
-      return calculatePlanarMapping(model.positions)
+      return updateUVs(calculatePlanarMapping(bufferData.positions), options)
     case 'Cylindrical':
-      return calculateCylindricalMapping(model.positions)
+      return updateUVs(calculateCylindricalMapping(bufferData.positions), options)
     case 'Spherical':
-      return calculateSphericalMapping(model.positions)
+      return updateUVs(calculateSphericalMapping(bufferData.positions), options)
     default:
-      return model.uvs //getUVFromGeoModel(model)
+      return bufferData.uvs
   }
 }
 
-function updateUVs(gl, model, options) {
-  let uvs = getCurrentUVFromGeoModel(gl, model)
+function updateUVs(uvs, options) {
   uvs = translateUVs(uvs, options.translateX, options.translateY)
   uvs = rotateUVs(uvs, options.rotate)
   uvs = scaleUVs(uvs, options.scaleX, options.scaleY)
-  setUVBuffer(gl, model, uvs)
-  //return uvs
+  return uvs
 }
 
 export function fetchImage(url) {

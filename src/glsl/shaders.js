@@ -1,8 +1,9 @@
-const vertex = `#version 300 es
+const gltfVertex = `#version 300 es
 precision mediump float;
 
 layout (location = 0) in vec3 aPosition;
 layout (location = 1) in vec2 aTexCoord;
+layout (location = 15) in vec2 aTexCoord1;
 layout (location = 2) in vec3 aNormal;
 
 /* SKINNING */
@@ -22,6 +23,8 @@ layout(location = 11) in vec3 aNormalTarget1;
 layout(location = 12) in vec3 aTangentTarget0;
 layout(location = 13) in vec3 aTangentTarget1;
 
+layout(location = 14) in vec4 aColor0;
+
 uniform float uMorphTargetWeight0;
 uniform float uMorphTargetWeight1;
 
@@ -33,66 +36,32 @@ uniform mat4 u_jointMatrix[2];
     mat4 matrix[65];
 } u_jointMatrix;*/
 
+uniform mat4 uModelMatrix;
+
+out vec4 vColor0;
 out vec3 vNormal;
 out vec2 vTexCoord;
+out vec2 vTexCoord1;
 out vec4 vTangent;
 
+out vec3 vFragPosition;
+
 void main() {
-  vec3 position = aPosition;
-  vec3 normal = aNormal;
-  //vec3 tangent = aTangent.xyz
-
-  // Apply morph targets
-  if (uMorphTargetWeight0 > 0.0) {
-    position += aPositionTarget0 * uMorphTargetWeight0;
-
-    if (uMorphTargetWeight1 > 0.0) {
-      position += aPositionTarget1 * uMorphTargetWeight1;
-    }
-  }
-
-  //normal += aNormalTarget0 * uMorphTargetWeight0;
-  //normal += aNormalTarget1 * uMorphTargetWeight1;
-
-  mat4 skinMatrix = mat4(1.0); // Default to identity matrix
-
-  if (uHasSkinning == 1) {
-    skinMatrix =  aWeight0.x * u_jointMatrix[int(aJoint0.x)] +
-                  aWeight0.y * u_jointMatrix[int(aJoint0.y)] +
-                  aWeight0.z * u_jointMatrix[int(aJoint0.z)] +
-                  aWeight0.w * u_jointMatrix[int(aJoint0.w)];
-  }
-  /*if (aWeight0 != vec4(0.0)) {
-      skinMatrix = aWeight0.x * u_jointMatrix.matrix[int(aJoint0.x)] +
-                    aWeight0.y * u_jointMatrix.matrix[int(aJoint0.y)] +
-                    aWeight0.z * u_jointMatrix.matrix[int(aJoint0.z)] +
-                    aWeight0.w * u_jointMatrix.matrix[int(aJoint0.w)];
-  }
-
-  if (aWeight1 != vec4(0.0)) {
-      skinMatrix += aWeight1.x * u_jointMatrix.matrix[int(aJoint1.x)] +
-                    aWeight1.y * u_jointMatrix.matrix[int(aJoint1.y)] +
-                    aWeight1.z * u_jointMatrix.matrix[int(aJoint1.z)] +
-                    aWeight1.w * u_jointMatrix.matrix[int(aJoint1.w)];
-  }*/
-
-  gl_Position = uMvpMatrix * skinMatrix * vec4(position, 1.0);
-
-  if (aNormal != vec3(0.0)) {
-      vec3 transformedNormal = mat3(transpose(inverse(skinMatrix))) * normal;
-      vNormal = (uMvpMatrix * vec4(transformedNormal, 0.0)).xyz;
-  } else {
-      vNormal = vec3(0.0); // Default normal if not defined
-  }
-  //gl_Position = uMvpMatrix * aPosition; //vec4(aPosition, 1.0);
-  //vNormal = (uMvpMatrix * aNormal).xyz;
+  gl_Position = uMvpMatrix * vec4(aPosition, 1.0);
+  vNormal = aNormal;
   vTexCoord = aTexCoord;
+  vTexCoord1 = aTexCoord1;
   vTangent = aTangent;
+  vFragPosition = (uModelMatrix * vec4(aPosition, 1.0)).xyz;
+
+  vColor0 = aColor0;
 }`
 
 //https://registry.khronos.org/glTF/specs/2.0/glTF-2.0.html#appendix-b-brdf-implementation
-const fragment = `#version 300 es
+const gltfFragment = `#version 300 es
 precision mediump float;
+
+uniform int uHasTexCoord1;
 
 uniform vec4 uBaseColor;
 uniform sampler2D uTexture;
@@ -108,336 +77,336 @@ uniform vec3 uEmissiveFactor;
 
 uniform sampler2D uMetallicRoughnessTexture;
 uniform int uHasMetallicRoughnessTexture;
-uniform float uMetallic;
 uniform float uMetallicFactor;
-uniform float uRoughness;
 uniform float uRoughnessFactor;
 
 uniform sampler2D uOcclusionTexture;
 uniform int uHasOcclusionTexture;
 uniform float uOcclusionStrength;
 
+uniform int uAlphaMode;
+uniform float uAlphaCutoff;
+
 // LIGHTS
 #define MAX_LIGHTS 8
 uniform int uNumberOfLights;
-uniform vec3 uLightPositions[MAX_LIGHTS]; //uNumberOfLights]
-uniform vec3 uLightColors[MAX_LIGHTS]; //uNumberOfLights]
-uniform vec3 uDiffuseColor[MAX_LIGHTS]; //= vec3(200, 200, 180)
-uniform vec3 uSpecularColor[MAX_LIGHTS];  // Material specular color
-uniform vec3 uAmbientalColor[MAX_LIGHTS];  // Material ambient color
-uniform float uShininess[MAX_LIGHTS];  // Material shininess
-uniform float uAttenuation[MAX_LIGHTS];  // Material shininess
+uniform vec3 uAmbientalColor;
+uniform vec3 uLightPositions[MAX_LIGHTS];
+uniform vec3 uLightColors[MAX_LIGHTS];
+uniform float uLightIntensities[MAX_LIGHTS];
+uniform float uAttenuationConstant[MAX_LIGHTS];
+uniform float uAttenuationLinear[MAX_LIGHTS];
+uniform float uAttenuationQuadratic[MAX_LIGHTS];
+
+uniform vec3 uCameraPosition;
+in vec3 vFragPosition;
+
+uniform int uHasColor0;
+in vec4 vColor0;
 
 in vec3 vNormal;
 in vec2 vTexCoord;
+in vec2 vTexCoord1;
 in vec4 vTangent;
 
 out vec4 oColor;
 
-// BRDF functions
-vec3 F_Schlick(float cosTheta, vec3 F0) {
-    return F0 + (1.0 - F0) * pow(1.0 - cosTheta, 5.0);
+// Constants
+const float M_PI = 3.141592653589793;
+
+// Function prototypes (declarations)
+float D(float alpha, vec3 N, vec3 H);
+vec3 specular_brdf(float alpha, vec3 V, vec3 H, vec3 N);
+vec3 diffuse_brdf(vec3 color);
+vec3 conductor_fresnel(vec3 f0, vec3 bsdf, vec3 V, vec3 H);
+vec3 fresnel_mix(float ior, vec3 base, vec3 layer, vec3 V, vec3 H);
+float G(float alpha, vec3 N, vec3 V, vec3 L);
+vec3 metal_brdf(float roughness, vec3 baseColor, vec3 V, vec3 H, vec3 N);
+vec3 dielectric_brdf(vec3 baseColor, float roughness, vec3 V, vec3 H, vec3 N);
+vec3 material(vec3 baseColor, float metallic, float roughness, vec3 V, vec3 L, vec3 N);
+
+// Specular BRDF using GGX microfacet model
+vec3 specular_brdf(float alpha, vec3 V, vec3 H, vec3 N) {
+    return V * D(alpha, N, H);  // V is the view vector, N is the surface normal, H is the half vector
 }
 
-float DistributionGGX(vec3 N, vec3 H, float roughness) {
-    float a = roughness * roughness;
-    float a2 = a * a;
-    float NdotH = max(dot(N, H), 0.0);
+// Diffuse BRDF using Lambertian reflection
+vec3 diffuse_brdf(vec3 color) {
+    return (1.0 / M_PI) * color;
+}
+
+// Fresnel term for conductors (metallic materials)
+vec3 conductor_fresnel(vec3 f0, vec3 bsdf, vec3 V, vec3 H) {
+    return bsdf * (f0 + (1.0 - f0) * pow(1.0 - abs(dot(V, H)), 5.0));  // V is the view vector, H is the half vector
+}
+
+// Fresnel term for dielectrics (non-metallic materials)
+vec3 fresnel_mix(float ior, vec3 base, vec3 layer, vec3 V, vec3 H) {
+    float f0 = pow((1.0 - ior) / (1.0 + ior), 2.0);  // Calculate F0 from IOR
+    float fr = f0 + (1.0 - f0) * pow(1.0 - abs(dot(V, H)), 5.0);
+    return mix(base, layer, fr);
+}
+
+// GGX distribution function for the microfacet model
+float D(float alpha, vec3 N, vec3 H) {
+    float a2 = alpha * alpha;
+    float NdotH = max(dot(N, H), 0.0);  // N is the surface normal, H is the half vector
     float NdotH2 = NdotH * NdotH;
-
-    float nom = a2;
     float denom = (NdotH2 * (a2 - 1.0) + 1.0);
-    denom = 3.14159265359 * denom * denom;
-
-    return nom / denom;
+    return a2 / (M_PI * denom * denom);
 }
 
-float GeometrySchlickGGX(float NdotV, float roughness) {
-    float r = (roughness + 1.0);
-    float k = (r * r) / 8.0;
+// Geometry function using Schlick-GGX approximation
+float G(float alpha, vec3 N, vec3 V, vec3 L) {
+    float NdotV = max(dot(N, V), 0.0);  // N is the surface normal, V is the view vector
+    float NdotL = max(dot(N, L), 0.0);  // L is the light vector
+    float k = alpha / 2.0;
 
-    float nom = NdotV;
-    float denom = NdotV * (1.0 - k) + k;
+    float ggx1 = NdotV / (NdotV * (1.0 - k) + k);
+    float ggx2 = NdotL / (NdotL * (1.0 - k) + k);
 
-    return nom / denom;
-}
-
-float GeometrySmith(vec3 N, vec3 V, vec3 L, float roughness) {
-    float NdotV = max(dot(N, V), 0.0);
-    float NdotL = max(dot(N, L), 0.0);
-    float ggx2 = GeometrySchlickGGX(NdotV, roughness);
-    float ggx1 = GeometrySchlickGGX(NdotL, roughness);
-    
     return ggx1 * ggx2;
-    }
-    // BRDF - end
-    /*
-    //THIS!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-        vec3 N = normalize(vNormal);
-        vec3 V = normalize(uCameraPosition - vPosition);
-        vec4 baseColor = texture(uBaseColorTexture, vTexCoord) * uBaseColor;
-        vec3 albedo = baseColor.rgb;
-        float alpha = baseColor.a;
-    
-        vec4 metallicRoughness = texture(uMetallicRoughnessTexture, vTexCoord);
-        float metallic = metallicRoughness.b * uMetallic;
-        float roughness = metallicRoughness.g * uRoughness;
-    
-        vec3 F0 = vec3(0.04);
-        F0 = mix(F0, albedo, metallic);
-    
-        vec3 ambient = vec3(0.03) * albedo;
-        vec3 color = ambient;
-    
-        for (int i = 0; i < 4; ++i) {
-            vec3 L = normalize(uLightPositions[i] - vPosition);
-            vec3 H = normalize(V + L);
-    
-            vec3 F = F_Schlick(max(dot(H, V), 0.0), F0);
-            float D = DistributionGGX(N, H, roughness);
-            float G = GeometrySmith(N, V, L, roughness);
-    
-            vec3 kS = F;
-            vec3 kD = vec3(1.0) - kS;
-            kD *= 1.0 - metallic;
-    
-            float NdotL = max(dot(N, L), 0.0);
-    
-            vec3 numerator = D * G * F;
-            float denominator = 4.0 * max(dot(N, V), 0.0) * NdotL + 0.001;
-            vec3 specular = numerator / denominator;
-    
-            color += (kD * albedo / 3.14159265359 + specular) * NdotL * uLightColors[i];
-        }
-    
-        fragColor = vec4(color, alpha);
-    */
+}
+
+// Metal BRDF
+vec3 metal_brdf(float roughness, vec3 baseColor, vec3 V, vec3 H, vec3 N) {
+    float alpha = roughness * roughness;
+    vec3 F0 = baseColor.rgb;
+
+    return specular_brdf(alpha, V, H, N) * (F0 + (1.0 - F0) * pow(1.0 - abs(dot(V, H)), 5.0));  // Schlick Fresnel approximation
+}
+
+// Dielectric BRDF
+vec3 dielectric_brdf(vec3 baseColor, float roughness, vec3 V, vec3 H, vec3 N) {
+    vec3 diffuse = diffuse_brdf(baseColor.rgb);  // Diffuse component
+    float alpha = roughness * roughness;         // Roughness squared for specular BRDF
+    vec3 specular = specular_brdf(alpha, V, H, N);
+
+    return fresnel_mix(1.5, diffuse, specular, V, H);  // Dielectrics use fixed IOR = 1.5, F0 = 0.04
+}
+
+// Final material BRDF combining metal and dielectric
+vec3 material(vec3 baseColor, float metallic, float roughness, vec3 V, vec3 L, vec3 N) {
+    vec3 H = normalize(V + L);  // Half vector
+    float alpha = roughness * roughness;  // Roughness squared
+    vec3 c_diff = mix(baseColor.rgb, vec3(0.0), metallic);  // Diffuse color is black for metals
+    vec3 f0 = mix(vec3(0.04), baseColor.rgb, metallic);     // Fresnel F0 for dielectrics is 0.04
+
+    // Schlick Fresnel term
+    vec3 F = f0 + (1.0 - f0) * pow(1.0 - abs(dot(V, H)), 5.0);  // Schlick's approximation
+
+    // Diffuse and specular contributions
+    vec3 f_diffuse = (1.0 - F) * (1.0 / M_PI) * c_diff;
+    vec3 f_specular = F * D(alpha, N, H) * G(alpha, N, V, L) / (4.0 * abs(dot(N, V)) * abs(dot(N, L)));
+
+    // Final BRDF, blending diffuse and specular based on metalness
+    return f_diffuse + f_specular;
+}
 
 void main() {
-/*
-vec4 baseColor = hasBaseColorTexture == 1 ? texture(uBaseColorTexture, vTexCoord) * uBaseColor : uBaseColor;
-    vec3 albedo = baseColor.rgb;
-    float alpha = baseColor.a;
+  // Base color
+  vec4 color = uBaseColor;
+  if (uHasBaseColorTexture == 1) {
+    color *= texture(uTexture, vTexCoord);
+  }
 
-    vec4 metallicRoughness = hasMetallicRoughnessTexture == 1 ? texture(uMetallicRoughnessTexture, vTexCoord) : vec4(uMetallic, uRoughness, 0.0, 0.0);
-    float metallic = metallicRoughness.b;
-    float roughness = metallicRoughness.g;
-*/
+  if (uHasColor0 == 1) {
+    color *= vColor0;
+  }
 
-    /*
-    vec3 baseColor = uBaseColor.rgb; //vec3(1.0);
-    float baseAlpha = uBaseColor.a;
-    float textureAlpha = 1.0;
-    if (uHasBaseColorTexture == 1) {
-      vec4 texture = texture(uTexture, vTexCoord);
-      vec3 textureColor = texture.rgb;
-      textureAlpha = texture.a;
-      baseColor = mix(baseColor, textureColor, 0.5);
+  if (uAlphaMode == 0) { // for opaque alpha mode
+    color.a = 1.0;
+  } else if (uAlphaMode == 1) { // for mask alpha mode
+    if (color.a < uAlphaCutoff) {
+      discard;
     }
+  }
+  
+  vec2 textureCoords = (uHasTexCoord1 == 1) ? vTexCoord1 : vTexCoord;
 
-    /*
-    vec3 normal = normalize(vNormal);
-    if (uHasNormalTexture == 1) {
-        vec3 tangentNormal = texture(uNormalTexture, vTexCoord).xyz * 2.0 - 1.0;
-        tangentNormal.xy *= uNormalTextureScale;
-        mat3 tbn = mat3(vTangent.xyz, cross(vNormal, vTangent.xyz), vNormal);
-        normal = normalize(tbn * tangentNormal);
-    }/
+  // Metallic and roughness
+  float metallic = uMetallicFactor;
+  float roughness = uRoughnessFactor;
+  if (uHasMetallicRoughnessTexture == 1) {
+    vec4 mrTexture = texture(uMetallicRoughnessTexture, textureCoords);
+    metallic = mrTexture.b * uMetallicFactor;  // Blue channel for metallic
+    roughness = mrTexture.g * uRoughnessFactor;  // Green channel for roughness
+  }
+
+  // Normal mapping
   vec3 normal = normalize(vNormal);
   if (uHasNormalTexture == 1) {
-      normal = normalize(texture(uNormalTexture, vTexCoord).xyz * 2.0 - 1.0);
-      normal = mix(normal, vNormal, 1.0 - uNormalTextureScale);
+    vec3 normalMap = texture(uNormalTexture, textureCoords).xyz * 2.0 - 1.0;
+    normalMap.xy *= uNormalTextureScale;
+    normal = normalize(normalMap);
   }
 
-    vec3 emissive = vec3(0.0);
-    if (uHasEmissiveTexture == 1) {
-        emissive = texture(uEmissiveTexture, vTexCoord).rgb * uEmissiveFactor;
-    }
+  /*vec3 fragPosition = vFragPosition;
 
-    float metallic = uMetallicFactor * uMetallic;
-    float roughness = uRoughnessFactor * uRoughness;
-    if (uHasMetallicRoughnessTexture == 1) {
-        vec4 metallicRoughness = texture(uMetallicRoughnessTexture, vTexCoord);
-        metallic *= metallicRoughness.b;
-        roughness *= metallicRoughness.g;
-    }
+  // View vector (assumed to be from camera position)
+  vec3 V = normalize(uCameraPosition - fragPosition);
 
-    float occlusion = 1.0;
-    if (uHasOcclusionTexture == 1) {
-        occlusion = texture(uOcclusionTexture, vTexCoord).r * uOcclusionStrength;
-    }
+  // Initial material color
+  vec3 finalColor = vec3(0.0);
 
-    vec3 ambient = vec3(0.0);
-    vec3 diffuse = vec3(0.0);
-    vec3 specular = vec3(0.0);
-
-    for (int i = 0; i < uNumberOfLights; i++) {
-        vec3 lightPos = uLightPositions[i];
-        vec3 lightColor = uLightColors[i];
-        vec3 diffuseColor = uDiffuseColor[i];
-        vec3 specularColor = uSpecularColor[i];
-        vec3 ambientalColor = uAmbientalColor[i];
-        float shininess = uShininess[i];
-        float attenuation = uAttenuation[i];
-
-        vec3 lightDir = normalize(lightPos - vTangent.xyz);
-        float diff = max(dot(normal, lightDir), 0.0);
-        vec3 reflectDir = reflect(-lightDir, normal);
-        vec3 viewDir = normalize(-vTangent.xyz);
-        float spec = pow(max(dot(viewDir, reflectDir), 0.0), shininess);
-
-        ambient += ambientalColor * lightColor;
-        diffuse += diff * diffuseColor * lightColor;
-        specular += spec * specularColor * lightColor;
-    }
-
-    vec3 color = ambient + diffuse + specular + emissive;
-    color = color * baseColor * occlusion;
-    float combinedAlpha = mix(baseAlpha, textureAlpha, 0.5);
-    oColor = vec4(color, combinedAlpha);
-*/
-  vec4 albedo = uBaseColor;
-  if (uHasBaseColorTexture == 1) {
-    albedo = mix(texture(uTexture, vTexCoord), uBaseColor, 0.2);
-  }
-  vec3 normal = normalize(vNormal);
-  
-  // Lambertian reflection (diffuse reflection)
-  vec3 diffuse = vec3(0.0);
-  
+  // Process lights
   for (int i = 0; i < uNumberOfLights; i++) {
-    vec3 lightDir = normalize(uLightPositions[i] - vec3(vTexCoord, 0.0));
-    float lambertian = max(dot(normal, lightDir), 0.0);
-    diffuse += uLightColors[i] * uDiffuseColor[i] * lambertian + uAmbientalColor[i];
+    vec3 L = normalize(uLightPositions[i] - fragPosition);  // Light direction
+    vec3 H = normalize(V + L);  // Half vector
+    float NdotL = max(dot(normal, L), 0.0);  // Diffuse term
+
+    // Material BRDF
+    vec3 brdfResult = material(color.rgb, metallic, roughness, V, L, normal);
+
+    // Compute attenuation (distance-based light falloff)
+    float distance = length(uLightPositions[i] - fragPosition); //vTangent.xyz);
+    float attenuation = 1.0 / (uAttenuationConstant[i] + uAttenuationLinear[i] * distance + uAttenuationQuadratic[i] * (distance * distance));
+
+    // Calculate light contribution (diffuse + specular)
+    vec3 diffuse = brdfResult * NdotL * vec3(1.0, 1.0, 1.0);
+    vec3 specular = brdfResult * NdotL * vec3(1.0, 1.0, 1.0);
+    vec3 lightContribution = attenuation * (diffuse + specular);
+
+    // Accumulate the light contribution
+    finalColor += lightContribution;
   }
-  
-  /*if (uBaseColor != vec4(1.0)) {
-    vec3 finalColor = mix(albedo.rgb, uBaseColor.rgb, 0.2) * diffuse;
-    oColor = vec4(finalColor, mix(albedo.a, uBaseColor.a, 0.2));
-  } else {
-    vec3 finalColor = albedo.rgb * diffuse;
-    oColor = vec4(finalColor, albedo.a); 
-  }*/
-  vec3 finalColor = albedo.rgb * diffuse;
-  oColor = vec4(finalColor, albedo.a);
-  
-  
-  
-  
-  // Phong reflection model
-  /*vec3 viewDir = normalize(normal - vec3(vTexCoord, 0.0));
-  vec3 resultColor = vec3(0.0);
-  
-  for (int i = 0; i < 4; i++) {
-    vec3 lightDir = normalize(uLightPositions[i] - vec3(vTexCoord, 0.0));
-    vec3 reflectDir = reflect(-lightDir, normal);
+*/
+  /*-----------*/
 
-    // Phong reflection model
+  vec3 diffuse = vec3(0.0);
+  for (int i = 0; i < uNumberOfLights; i++) {
+    vec3 lightDir = normalize(uLightPositions[i] - vFragPosition);
     float lambertian = max(dot(normal, lightDir), 0.0);
-    float phong = pow(max(dot(reflectDir, viewDir), 0.0), uShininess[i]);
-
-    // Combine diffuse and specular components;
-    vec3 diffuse = uDiffuseColor[i] * lambertian;
-    vec3 specular = uSpecularColor[i] * phong;
-
-    resultColor += uLightColors[i] * (diffuse + specular); // * uAttenuation[i];
+    diffuse += uLightColors[i] * lambertian; // * uAmbientalColor;
   }
 
-  vec3 finalColor = albedo.rgb * (resultColor + uAmbientalColor[0]);
-  //finalColor = mix(albedo.rgb, uSpecularColor);
-  oColor = vec4(finalColor, albedo.a);*/
+  vec3 finalColor = color.rgb; //* diffuse;
 
+  // Emissive component
+  if (uHasEmissiveTexture == 1) {
+    vec3 emissive = texture(uEmissiveTexture, textureCoords).rgb * uEmissiveFactor;
+    finalColor += emissive;
+  }
 
-  
-  //oColor = texture(uNormalTexture, vTexCoord);
-  //oColor = vec4(normal, 1);
+  // Occlusion map
+  if (uHasOcclusionTexture == 1) {
+    float occlusion = 1.0 + uOcclusionStrength * (texture(uOcclusionTexture, textureCoords).r - 1.0);
+    finalColor = mix(finalColor, finalColor * occlusion, uOcclusionStrength);
+  }
+
+  // Final output color
+  oColor = vec4(mix(finalColor, uAmbientalColor, 0.1), color.a); //finalColor * occlusion + emissive
 }`
 
-const simpleVertex = `#version 300 es
+const geoVertex = `#version 300 es
 precision mediump float;
 
 layout (location = 0) in vec3 aPosition;
-layout (location = 1) in vec2 aTexCoord;
+layout (location = 1) in vec3 aNormal;
+layout (location = 2) in vec2 aTexCoord;
 
 uniform mat4 uMvpMatrix;
+uniform mat4 uModelMatrix;
 
+out vec3 vFragPosition;
 out vec2 vTexCoord;
+out vec3 vNormal;
 
 void main() {
   gl_Position = uMvpMatrix * vec4(aPosition, 1.0);
+  vNormal = aNormal;
   vTexCoord = aTexCoord;
+  vFragPosition = (uModelMatrix * vec4(aPosition, 1.0)).xyz;
 }`
 
-const simpleFragment = `#version 300 es
+const geoFragment = `#version 300 es
 precision mediump float;
 
+uniform vec4 uBaseColor;
 uniform sampler2D uTexture;
+uniform int uHasBaseColorTexture;
 
 // LIGHTS
-//uniform int uNumberOfLights;
-//uniform vec3 uLightPositions[4]; //uNumberOfLights]
-//uniform vec3 uLightColors[4]; //uNumberOfLights]
-//uniform vec3 uDiffuseColor; = vec3(200, 200, 180)
-//uniform vec3 uSpecularColor;  // Material specular color
-//uniform float uShininess;  // Material shininess
+#define MAX_LIGHTS 8
+uniform int uNumberOfLights;
+uniform vec3 uAmbientalColor;
+uniform vec3 uLightPositions[MAX_LIGHTS];
+uniform vec3 uLightColors[MAX_LIGHTS];
+uniform float uLightIntensities[MAX_LIGHTS];
+uniform float uAttenuationConstant[MAX_LIGHTS];
+uniform float uAttenuationLinear[MAX_LIGHTS];
+uniform float uAttenuationQuadratic[MAX_LIGHTS];
+
+// MATERIAL
+uniform int uShadingModel;   // 0 = Lambert, 1 = Phong
+uniform vec3 uDiffuseColor;
+uniform vec3 uSpecularColor;
+uniform float uShininess;
+
+uniform vec3 uCameraPosition;
+in vec3 vFragPosition;
 
 in vec2 vTexCoord;
+in vec3 vNormal;
 
 out vec4 oColor;
 
 void main() {
-  vec4 albedo = texture(uTexture, vTexCoord);
+    vec3 albedo = uBaseColor.rgb;
+    
+    if (uHasBaseColorTexture == 1) {
+      albedo *= texture(uTexture, vTexCoord).rgb;
+    }
 
-  // Lambertian reflection (diffuse reflection)
-  vec3 diffuse = vec3(0.0);
+    vec3 normal = normalize(vNormal);
+    vec3 viewDir = normalize(uCameraPosition - vFragPosition);
+    
+    vec3 finalColor = vec3(0.0);
 
-  /*for (int i = 0; i < 2; i++) {
-    vec3 lightDir = normalize(uLightPositions[i] - vec3(vTexCoord, 0.0));
-    float lambertian = max(dot(normal, lightDir), 0.0);
-    diffuse += uLightColors[i] * uDiffuseColor * lambertian;
-  }*/
+    for (int i = 0; i < uNumberOfLights; i++) {
+        // Light calculations
+        vec3 L = uLightPositions[i] - vFragPosition;
+        vec3 lightDir = normalize(L);
+        float distance = length(L);
 
-  vec3 finalColor = albedo.rgb * diffuse;
-  oColor = vec4(finalColor, albedo.a);
+        // Attenuation calculation
+        float attenuation = (uAttenuationConstant[i] + uAttenuationLinear[i] * distance + uAttenuationQuadratic[i] * (distance * distance)); //1.0 / (uAttenuationConstant[i] + uAttenuationLinear[i] * distance + uAttenuationQuadratic[i] * (distance * distance));
 
+        // Lambertian Diffuse
+        float diff = max(dot(normal, lightDir), 0.0);
+        vec3 diffuse = diff * uLightColors[i] * albedo * uLightIntensities[i]; // * 0.5;  // Scale down
 
+        // Phong Specular (only if using Phong shading)
+        vec3 specular = vec3(0.0);
+        if (uShadingModel == 1) {
+            vec3 reflectDir = reflect(-lightDir, normal);
+            float spec = pow(max(dot(viewDir, reflectDir), 0.0), uShininess);
+            specular = spec * uSpecularColor * uLightColors[i] * uLightIntensities[i]; // * 0.5; // Scale down
+        }
 
+        // Apply ambient lighting and attenuation
+        //vec3 ambient = uAmbientalColor * albedo * 0.3;
+        finalColor += (diffuse + specular) * attenuation; //(ambient + diffuse + specular) * attenuation;
+    }
 
-  // Phong reflection model - no ambiental color!
-  /*vec3 viewDir = normalize(vNormal - vec3(vTexCoord, 0.0)) //normalize(normal - vec3(vTexCoord, 0.0))
-  vec3 resultColor = vec3(0.0)
-
-  for (int i = 0; i < 2; i++) {
-    vec3 lightDir = normalize(uLightPositions[i] - vec3(vTexCoord, 0.0))
-    vec3 reflectDir = reflect(-lightDir, normal)
-
-    // Phong reflection model
-    float lambertian = max(dot(normal, lightDir), 0.0)
-    float specular = pow(max(dot(reflectDir, viewDir), 0.0), uShininess)
-
-    // Combine diffuse and specular components
-    vec3 diffuse = uDiffuseColor * lambertian
-    vec3 specularComponent = uSpecularColor * specular
-
-    resultColor += uLightColors[i] * (diffuse + specularComponent)
-  }
-
-  vec3 finalColor = albedo.rgb * resultColor
-  finalColor = mix(albedo.rgb, uSpecularColor)
-  oColor = vec4(finalColor, albedo.a)*/
+    // Clamp the final color to prevent over-brightness
+    finalColor = clamp(finalColor, 0.0, 1.0);
+    
+    oColor = vec4(mix(finalColor, uAmbientalColor, 0.1), uBaseColor.a); //vec4(pow(finalColor, vec3(1.0 / 2.2)), uBaseColor.a);
 }`
 
-const axesVert = `#version 300 es
+const axesVertex = `#version 300 es
 precision mediump float;
-in vec4 aPosition;
+in vec3 aPosition;
+in vec3 aColor;
 uniform mat4 uModelViewProjection;
 out vec4 vColor;
 void main() {
-    gl_Position = uModelViewProjection * aPosition;
-    vColor = aPosition * 0.5 + 0.5;
+    gl_Position = uModelViewProjection * vec4(aPosition, 1);
+    vColor = vec4(aColor, 0.7);
 }`
 
-const axesFrag = `#version 300 es
+const axesFragment = `#version 300 es
 precision mediump float;
 in vec4 vColor;
 out vec4 oColor;
@@ -446,7 +415,7 @@ void main() {
 }`
 
 export const shaders = {
-  axes: { vertex: axesVert, fragment: axesFrag },
-  simple: { vertex: simpleVertex, fragment: simpleFragment },
-  pbr: { vertex, fragment }
+  axes: { vertex: axesVertex, fragment: axesFragment },
+  geo: { vertex: geoVertex, fragment: geoFragment },
+  gltf: { vertex: gltfVertex, fragment: gltfFragment }
 }

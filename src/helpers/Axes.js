@@ -10,20 +10,30 @@ export class Axes {
     this.program = options.program
 
     this.vertices = new Float32Array([
-      0.0, 0.0, 0.0, // Origin (black)
+      0.0, 0.0, 0.0, // Origin
       1.0, 0.0, 0.0, // X-axis endpoint (red)
-      0.0, 0.0, 0.0, // Origin (black)
+      0.0, 0.0, 0.0, // Origin
       0.0, 1.0, 0.0, // Y-axis endpoint (green)
-      0.0, 0.0, 0.0, // Origin (black)
+      0.0, 0.0, 0.0, // Origin
       0.0, 0.0, 1.0  // Z-axis endpoint (blue)
+    ])
+
+    this.colors = new Float32Array([
+      1, 0, 0, 1, 0, 0, // Red
+      0, 1, 0, 0, 1, 0, // Green
+      0, 0, 1, 0, 0, 1  // Blue
     ])
 
     this.vao = this.gl.createVertexArray()
     this.gl.bindVertexArray(this.vao)
-    this.buffer = WebGL.createBuffer(this.gl, { data: this.vertices })
 
+    WebGL.createBuffer(this.gl, { data: this.vertices })
     this.gl.enableVertexAttribArray(this.program.attributes.aPosition)
     this.gl.vertexAttribPointer(this.program.attributes.aPosition, 3, this.gl.FLOAT, false, 0, 0)
+
+    WebGL.createBuffer(this.gl, { data: this.colors })
+    this.gl.enableVertexAttribArray(this.program.attributes.aColor)
+    this.gl.vertexAttribPointer(this.program.attributes.aColor, 3, this.gl.FLOAT, false, 0, 0)
   }
 
   getViewProjectionMatrix(camera) {

@@ -11,7 +11,7 @@ export class PerspectiveCamera extends Camera {
 
     this.aspect = options.aspect ?? 1.618
     this.fov = options.fov ?? (45 * Math.PI / 180)
-    this.near = options.near ?? 0.1
+    this.near = options.near ?? 0.01
     this.far = options.far ?? Infinity
 
     //https://registry.khronos.org/glTF/specs/2.0/glTF-2.0.html#infinite-perspective-projection
@@ -32,7 +32,7 @@ export class PerspectiveCamera extends Camera {
     */
     /*const perspective = mat4.create()
     const a = this.aspect
-    const y = this.fov // yFov ..???
+    const y = this.fov //2 * Math.atan(Math.tan(this.fov / 2) / a) // yFov ..???
     const n = this.near
 
     perspective[0] = 1 / (a * Math.tan(0.5 * y))

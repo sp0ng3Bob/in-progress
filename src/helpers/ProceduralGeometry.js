@@ -1,5 +1,10 @@
 import { WebGL } from "../engine/WebGL.js"
-import { getNormalisedRGB } from "./PointLight.js"
+import {
+  getNormalisedRGB,
+  getUnsignedRGB,
+  getPositionNormalised,
+  getPositionString
+} from "./PointLight.js"
 import { updateMapping, fetchImage } from "./Textures.js"
 import glMatrix from "glMatrix"
 
@@ -32,7 +37,7 @@ function createAndBindBuffer(gl, data, attribute = undefined, target = undefined
   return buffer
 }
 
-function prepareBuffers(gl, program, bufferData, color, textureImage) {
+async function prepareBuffers(gl, program, bufferData, color, textureImage) {
   const { positions, normals, indices, uvs } = bufferData
 
   const vao = gl.createVertexArray()
@@ -43,9 +48,9 @@ function prepareBuffers(gl, program, bufferData, color, textureImage) {
   const indexBuffer = createAndBindBuffer(gl, indices, null, gl.ELEMENT_ARRAY_BUFFER)
   const uvBuffer = createAndBindBuffer(gl, uvs, { attr: program.attributes.aTexCoord, size: 2, type: gl.FLOAT })
 
-  const texture = setUpTexture(gl, textureImage)
+  const texture = await setUpTexture(gl, textureImage)
   const sampler = WebGL.createSampler(gl, { wrapS: gl.REPEAT, wrapT: gl.REPEAT, min: gl.NEAREST_MIPMAP_LINEAR, mag: gl.LINEAR })
-  const baseColor = getNormalisedRGB(color)
+  const baseColor = color
 
   return {
     indexCount: indices.length,
@@ -163,7 +168,7 @@ function createCubeGeometry(size = 1, position = [0, 0, 0], rotation = [0, 0, 0,
   }
 }
 
-function createSphereGeometry(radius = 1, position = [0, 0, 0], rotation = [0, 0, 0, 1], latBands = 30, longBands = 30) {
+function createSphereGeometry(radius = 1, position = [0, 0, 0], rotation = [0, 0, 0, 1], latBands = 36, longBands = 36) {
   let positions = []
   const normals = []
   const indices = []
@@ -186,19 +191,21 @@ function createSphereGeometry(radius = 1, position = [0, 0, 0], rotation = [0, 0
       positions.push(radius * x, radius * y, radius * z)
       normals.push(x, y, z)
       uvs.push(lon / longBands, 1 - lat / latBands)
+
+      if (lat < latBands && lon < longBands) {
+        /*const first = (lat * longBands) + lon
+        const second = first + longBands
+        const nextLon = (lon + 1) % longBands
+        indices.push(first, second, first + 1)
+        indices.push(second, second + nextLon, first + nextLon)*/
+        const first = (lat * (longBands + 1)) + lon
+        const second = first + longBands + 1
+
+        indices.push(first, second, first + 1)
+        indices.push(second, second + 1, first + 1)
+      }
     }
   }
-
-  for (let lat = 0; lat < latBands; lat++) {
-    for (let lon = 0; lon < longBands; lon++) {
-      const first = (lat * (longBands + 1)) + lon
-      const second = first + longBands + 1
-
-      indices.push(first, second, first + 1)
-      indices.push(second, second + 1, first + 1)
-    }
-  }
-
 
   positions = applyTransformations(positions, position, rotation)
 
@@ -210,7 +217,7 @@ function createSphereGeometry(radius = 1, position = [0, 0, 0], rotation = [0, 0
   }
 }
 
-function createTorusGeometry(outerRadius = 1, innerRadius = 0.4, position = [0, 0, 0], rotation = [0, 0, 0, 1], radialSegments = 30, tubularSegments = 30) {
+function createTorusGeometry(outerRadius = 1, innerRadius = 0.4, position = [0, 0, 0], rotation = [0, 0, 0, 1], radialSegments = 36, tubularSegments = 36) {
   let positions = []
   const normals = []
   const indices = []
@@ -218,12 +225,12 @@ function createTorusGeometry(outerRadius = 1, innerRadius = 0.4, position = [0, 
 
   const radius = outerRadius - innerRadius
 
-  for (let j = 0; j <= radialSegments; j++) {
+  for (let j = 0; j < radialSegments; j++) {
     const theta = j * 2 * Math.PI / radialSegments
     const cosTheta = Math.cos(theta)
     const sinTheta = Math.sin(theta)
 
-    for (let i = 0; i <= tubularSegments; i++) {
+    for (let i = 0; i < tubularSegments; i++) {
       const phi = i * 2 * Math.PI / tubularSegments
       const cosPhi = Math.cos(phi)
       const sinPhi = Math.sin(phi)
@@ -231,24 +238,21 @@ function createTorusGeometry(outerRadius = 1, innerRadius = 0.4, position = [0, 
       const x = (radius + innerRadius * cosPhi) * cosTheta
       const y = innerRadius * sinPhi
       const z = (radius + innerRadius * cosPhi) * sinTheta
+      positions.push(x, y, z)
 
       const nx = cosPhi * cosTheta
       const ny = sinPhi
       const nz = cosPhi * sinTheta
-
-      positions.push(x, y, z)
       normals.push(nx, ny, nz)
+
       uvs.push(j / radialSegments, i / tubularSegments)
-    }
-  }
 
-  for (let j = 1; j <= radialSegments; j++) {
-    for (let i = 1; i <= tubularSegments; i++) {
-      const a = (tubularSegments + 1) * j + i - 1
-      const b = (tubularSegments + 1) * (j - 1) + i - 1
-      const c = (tubularSegments + 1) * (j - 1) + i
-      const d = (tubularSegments + 1) * j + i
-
+      const nextJ = (j + 1) % radialSegments
+      const nextI = (i + 1) % tubularSegments
+      const a = (tubularSegments * j) + i
+      const b = (tubularSegments * nextJ) + i
+      const c = (tubularSegments * nextJ) + nextI
+      const d = (tubularSegments * j) + nextI
       indices.push(a, b, d)
       indices.push(b, c, d)
     }
@@ -264,57 +268,163 @@ function createTorusGeometry(outerRadius = 1, innerRadius = 0.4, position = [0, 
   }
 }
 
-function setUpTexture(gl, textureImage) {
+async function setUpTexture(gl, textureImage) {
   if (textureImage != "") {
-    fetchImage(new URL(textureImage, window.location))
-      .then(image => {
-        const texture = WebGL.createTexture(gl, { image, mip: true, wrapS: gl.REPEAT, wrapT: gl.REPEAT, min: gl.NEAREST_MIPMAP_LINEAR, mag: gl.LINEAR })
-
-        /*if (gl.isTexture(texture)) {
-          console.log('Texture is valid and loaded');
-        } else {
-          console.error('Failed to load texture');
-        }*/
-
-        return texture
+    try {
+      const image = await fetchImage(new URL(textureImage, window.location))
+      const texture = WebGL.createTexture(gl, {
+        image,
+        mip: true,
+        wrapS: gl.REPEAT,
+        wrapT: gl.REPEAT,
+        min: gl.NEAREST_MIPMAP_LINEAR,
+        mag: gl.LINEAR,
       })
-      .catch(error => {
-        console.error('Error loading image:', error)
-      })
+
+      return texture
+    } catch (error) {
+      console.error('Error loading image:', error)
+      return undefined
+    }
   }
   return undefined
 }
 /* ----- */
 
-export function createPlane(gl, program, size, position, rotation, color, textureImage, textureMappings) {
-  const bufferData = createPlaneGeometry(size, position, rotation)
-  bufferData.uvs = updateMapping(gl, bufferData, textureMappings)
-  const outModel = prepareBuffers(gl, program, bufferData, color, textureImage)
+export async function createPlane(gl, program, options) {
+  const bufferData = createPlaneGeometry(options.size, options.position, options.rotation)
+  bufferData.uvs = updateMapping(bufferData, options.textureMappingOptions)
+  const outModel = await prepareBuffers(gl, program, bufferData, options.material.color, options.texture)
   outModel.type = "Plane"
+  outModel.bufferData = bufferData
+  outModel.geometry = {
+    size: options.size,
+    position: getPositionString(options.position),
+    rotation: getPositionString(options.rotation)
+  }
+  outModel.texturing = {
+    texture: options.texture,
+    textureMappings: options.textureMappingOptions
+  }
+  outModel.shadingModel = {
+    type: options.material.type,
+    diffuseColor: options.material.diffuseColor,
+    specularColor: options.material.specularColor,
+    shininess: options.material.shininess
+  }
   return outModel
 }
 
-/*export function updatePlane(gl, model, size, position, rotation, color, textureImage, textureMappings) {
-  return
-}*/
-
-export function createCube(gl, program, size, position, rotation, color, textureImage) {
-  const bufferData = createCubeGeometry(size, position, rotation)
-  const outModel = prepareBuffers(gl, program, bufferData, color, textureImage)
+export async function createCube(gl, program, options) {
+  const bufferData = createCubeGeometry(options.size, options.position, options.rotation)
+  bufferData.uvs = updateMapping(bufferData, options.textureMappingOptions)
+  const outModel = await prepareBuffers(gl, program, bufferData, options.material.color, options.texture)
   outModel.type = "Cube"
+  outModel.bufferData = bufferData
+  outModel.geometry = {
+    size: options.size,
+    position: getPositionString(options.position),
+    rotation: getPositionString(options.rotation)
+  }
+  outModel.texturing = {
+    texture: options.texture,
+    textureMappings: options.textureMappingOptions
+  }
+  outModel.shadingModel = {
+    type: options.material.type,
+    diffuseColor: options.material.diffuseColor,
+    specularColor: options.material.specularColor,
+    shininess: options.material.shininess
+  }
   return outModel
 }
 
-export function createSphere(gl, program, radius, position, rotation, color, textureImage) {
-  const bufferData = createSphereGeometry(radius, position, rotation)
-  const outModel = prepareBuffers(gl, program, bufferData, color, textureImage)
+export async function createSphere(gl, program, options) {
+  const bufferData = createSphereGeometry(options.radius, options.position, options.rotation, options.latBands, options.lonBands)
+  bufferData.uvs = updateMapping(bufferData, options.textureMappingOptions)
+  const outModel = await prepareBuffers(gl, program, bufferData, options.material.color, options.texture)
   outModel.type = "Sphere"
+  outModel.bufferData = bufferData
+  outModel.geometry = {
+    size: options.radius,
+    position: getPositionString(options.position),
+    rotation: getPositionString(options.rotation),
+    lat: options.latBands,
+    lon: options.lonBands
+  }
+  outModel.texturing = {
+    texture: options.texture,
+    textureMappings: options.textureMappingOptions
+  }
+  outModel.shadingModel = {
+    type: options.material.type,
+    diffuseColor: options.material.diffuseColor,
+    specularColor: options.material.specularColor,
+    shininess: options.material.shininess
+  }
   return outModel
 }
 
-export function createTorus(gl, program, radius, holeRadius, position, rotation, color, textureImage) {
-  const bufferData = createTorusGeometry(radius, holeRadius, position, rotation)
-  const outModel = prepareBuffers(gl, program, bufferData, color, textureImage)
+export async function createTorus(gl, program, options) {
+  const bufferData = createTorusGeometry(options.radius, options.holeRadius, options.position, options.rotation, options.radialSegments, options.tubularSegments)
+  bufferData.uvs = updateMapping(bufferData, options.textureMappingOptions)
+  const outModel = await prepareBuffers(gl, program, bufferData, options.material.color, options.texture)
   outModel.type = "Torus"
+  outModel.bufferData = bufferData
+  outModel.geometry = {
+    size: options.radius,
+    innerHole: options.holeRadius,
+    position: getPositionString(options.position),
+    rotation: getPositionString(options.rotation),
+    lat: options.radialSegments,
+    lon: options.tubularSegments
+  }
+  outModel.texturing = {
+    texture: options.texture,
+    textureMappings: options.textureMappingOptions
+  }
+  outModel.shadingModel = {
+    type: options.material.type,
+    diffuseColor: options.material.diffuseColor,
+    specularColor: options.material.specularColor,
+    shininess: options.material.shininess
+  }
   return outModel
+}
+
+export async function updateGeoBuffers(gl, program, model) {
+  let bufferData
+
+  switch (model.type) {
+    case "Plane":
+      bufferData = createPlaneGeometry(model.geometry.size, getPositionNormalised(model.geometry.position), getPositionNormalised(model.geometry.rotation))
+      break
+    case "Cube":
+      bufferData = createCubeGeometry(model.geometry.size, getPositionNormalised(model.geometry.position), getPositionNormalised(model.geometry.rotation))
+      break
+    case "Sphere":
+      bufferData = createSphereGeometry(model.geometry.size, getPositionNormalised(model.geometry.position), getPositionNormalised(model.geometry.rotation), model.geometry.lat, model.geometry.lon)
+      break
+    case "Torus":
+      bufferData = createTorusGeometry(model.geometry.size, model.geometry.innerHole, getPositionNormalised(model.geometry.position), getPositionNormalised(model.geometry.rotation), model.geometry.lat, model.geometry.lon)
+      break
+    default:
+      console.error("Unknown model type")
+      return
+  }
+
+  const newModel = await prepareBuffers(gl, program, bufferData, model.baseColor, "")
+
+  model.vao = newModel.vao
+  model.indexCount = newModel.indexCount
+}
+
+export async function updateGeoTexture(gl, model) {
+  const newTex = await setUpTexture(gl, model.texturing.texture)
+  model.texture = newTex
+}
+
+export async function updateGeoTextureMapping(gl, program, model) {
+  model.uvs = updateMapping(model.bufferData, model.texturing.textureMappings)
+  const uvBuffer = createAndBindBuffer(gl, model.uvs, { attr: program.attributes.aTexCoord, size: 2, type: gl.FLOAT })
 }

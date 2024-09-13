@@ -11,4 +11,11 @@ export class Camera {
       : mat4.create()
   }
 
+  lookAt(cameraPosition, lookingAtPosition) {
+    const viewMatrix = mat4.create()
+    mat4.lookAt(viewMatrix, cameraPosition, lookingAtPosition, [0, 1, 0])
+    mat4.multiply(viewMatrix, viewMatrix, this.matrix)
+    return viewMatrix
+  }
+
 }

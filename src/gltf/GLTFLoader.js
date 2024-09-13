@@ -336,12 +336,9 @@ export class GLTFLoader {
       options.image = await this.loadImage(gltfSpec.source)
     }
 
-    //When texture.sampler is undefined, a sampler with repeat wrapping (in both directions) and auto filtering MUST be used.
     if (gltfSpec.sampler !== undefined) {
       options.sampler = await this.loadSampler(gltfSpec.sampler, "samplers")
-    } /*else {
-      options.sampler = defaultSampler...
-    }*/
+    }
 
     const texture = new Texture(options)
     this.cache.set(gltfSpec, texture)
@@ -391,7 +388,6 @@ export class GLTFLoader {
     options.alphaMode = gltfSpec.alphaMode ?? "OPAQUE"
     options.alphaCutoff = gltfSpec.alphaCutoff ?? 0.5
     options.doubleSided = gltfSpec.doubleSided ?? false
-    console.log("MATERIAL WHAAT??", gltfSpec, options)
 
     const material = new Material(options)
     this.cache.set(gltfSpec, material)
@@ -410,10 +406,9 @@ export class GLTFLoader {
       return this.cache.get(gltfSpec)
     }
 
-    const options = { primitives: [] } //, weights: [] }
+    const options = { primitives: [] }
     for (const primitiveSpec of gltfSpec.primitives) {
       const primitiveOptions = { attributes: {} }
-      //primitiveOptions.attributes = {}
       for (const name in primitiveSpec.attributes) {
         primitiveOptions.attributes[name] = await this.loadAccessor(primitiveSpec.attributes[name])
       }

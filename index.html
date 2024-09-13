@@ -8,7 +8,7 @@
 	LOAD MODEL AND MODEL CONTROLS: -> MODEL 
 	(2) Load 3D models in glTF 2.0 format and position them in space 
 	(with options for translation, rotation, and scaling). 
-    Q- position in space missing
+    Q- DONE
 
 	MODEL PROPERTIES: -> MODEL
 	(3) Display model properties: number of vertices, number of indices, and the size of the bounding box. 
@@ -21,56 +21,36 @@
 	CAMERA CONTROLS: -> CAMERAS
 	(5) Allow camera position and rotation control using mouse or keyboard input, 
 	with the ability to change the camera's focal point. 
-    Q- ne dela lih najbolj pravilno
+    Q- orbit around the model not working as it should - in my oppinion lol (ONLY WORKS WITH THE PREDEFINED glTF MODEL'S CAMERA ??)
 
 	LIGHTS: -> LIGHTS
 	(6) Place point lights in the scene, with adjustable parameters for color, 
 	intensity, and attenuation (constant, linear, quadratic attenuation). 
-    Q- TODO
+    Q- DONE
 	(7) Define the lighting model (Lambert and Phong) and shading parameters 
 	(diffuse and specular color, shininess) for each object. 
-    Q- TODO
+    A- Pri izbiri osvetlitvenega modela je bilo mišljeno določanje parametrov Lambertovega in Phongovega modela. Pod to spada
+    tudi vklop/izklop Lambertovega oz. Phongovega modela.
+    Q- NOT-WORKING FRAGMENT SHADER!
 
 	FRAGMENT SHADER: ->
 	(8) Implement per-fragment lighting and shading calculations. 
-    Q- TODO
-    //https://github.com/KhronosGroup/glTF-Sample-Renderer/blob/74ac656068acda7b5cd96b6c4d977e27466a8832/source/Renderer/shaders/primitive.vert
-    //https://github.com/KhronosGroup/glTF-Sample-Renderer/blob/74ac656068acda7b5cd96b6c4d977e27466a8832/source/Renderer/shaders/pbr.frag
+    Q- NOT WORKING YET!
 
-	TEXTURES: -> MODEL.TEXTURES
+	TEXTURES: -> MODEL.TEXTURES & PROCEDURAL GEOMETRY
 	(9) Assign textures to each object individually, with options for 
 	texture coordinate mapping (input file coordinates, planar mapping, 
 	cylindrical mapping, spherical mapping), and allow translation, rotation, 
 	scaling, and projection direction for UV coordinates. 
-    Q- ne pokaže teksture, ampak vse drugo je že v kodi, ni projection directiona
+    A- Pri določanju teksture je mišljena le osnovna (difuzna) tekstura. Uporabe drugih tekstur navodila ne predvidevajo.
+    Določanje tekstur naj bo omogočeno tudi za GLTF modele.
+    Q- manjka projection direction, drugo ne dela in nisem siguren zakaj ne.
 
 	GLOBALS:
 	(10) Provide a global setting to control texture wrapping modes (CLAMP_TO_EDGE, REPEAT, MIRRORED_REPEAT).
 	(11) Provide a global setting to control texture filtering modes (NEAREST, LINEAR) and mipmapping options.
 	(12) Allow global enabling and disabling of mipmaps.
-    Q- ne razumem točno; kaj to kao povozi vse druge samplerje in teksture v sceni, al kaj?
--->
-
-<!--
-The normal way to use WebGL:
-
-At init time
-  > for each shader program
-    1. create and compile vertex shader
-    2. create and compile fragment shader
-    3. create program, attach shaders, link program
-  > for each model
-    0. for each type of vertex data (positions, normal, color, texcoord
-    1. create a buffer
-    2. copy data to buffer
-  > create textures
-
-Then at render time
-  > for each model
-    1. use shader program appropriate for model
-    2. bind buffers, enable and setup attributes
-    3. bind textures and set uniforms
-    4. call drawArrays or drawElements
+    A- Globalno spreminjanje vzorčenja in filtriranja naj deluje na vse modele v sceni.
 -->
 
 <!-- https://webgl2fundamentals.org/webgl/lessons/resources/webgl-state-diagram.html -->
@@ -100,7 +80,7 @@ Then at render time
 <body>
 
   <div class="Fullscreen">
-    <canvas id="mainCanvas"></canvas>
+    <canvas id="mainCanvas" oncontextmenu="return false"></canvas>
   </div>
 
   <div class="Logs">
@@ -121,8 +101,36 @@ Then at render time
     </span>
   </div>
 
-  <!-- <input type="file" id="localFile" accept=".png, .jpg, .jpeg">
-  <img id="image" alt="Local file for loading textures" style="display:none; max-width: 100%;"> -->
+
+  <dialog id="transformGltfDialog">
+    <form method="dialog">
+      <h2>Enter Model Transformations</h2>
+
+      <h3>Position (vec3)</h3>
+      <input type="text" id="positionX" placeholder="X">
+      <input type="text" id="positionY" placeholder="Y">
+      <input type="text" id="positionZ" placeholder="Z">
+
+      <h3>Rotation (quaternion)</h3>
+      <input type="text" id="rotationX" placeholder="X">
+      <input type="text" id="rotationY" placeholder="Y">
+      <input type="text" id="rotationZ" placeholder="Z">
+      <input type="text" id="rotationW" placeholder="W">
+
+      <h3>Scaling (vec3)</h3>
+      <input type="text" id="scaleX" placeholder="X">
+      <input type="text" id="scaleY" placeholder="Y">
+      <input type="text" id="scaleZ" placeholder="Z">
+
+      <menu>
+        <button id="submitTransform" value="default">OK</button>
+      </menu>
+    </form>
+  </dialog>
+
+
+  <input type="file" id="localFileChooser" accept=".png, .jpg, .jpeg .gltf .glb" style="display:none;">
+  <!-- <img id="image" alt="Local file chooser for loading textures or gltf models" style="display:none;"> -->
 </body>
 
 </html>

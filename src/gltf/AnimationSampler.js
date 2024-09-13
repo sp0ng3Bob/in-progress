@@ -48,12 +48,6 @@ export class AnimationSampler {
       //When used with CUBICSPLINE interpolation, tangents (ak, bk) and values (vk) are grouped within keyframes:
       //a1, a2,…​an, v1, v2,…​vn, b1, b2,…​bn
       const size = this.input.length
-      /*const firtsThird = size * this.csbs
-      const secondThird = firtsThird * 2
-      this.aTangents = this.output.slice(0, firtsThird)
-      this.bTangents = this.output.slice(secondThird)
-      this.output = this.output.slice(firtsThird, secondThird)*/
-
       this.aTangents = new Float32Array(size * this.csbs)
       this.bTangents = new Float32Array(size * this.csbs)
       let values = new Float32Array(size * this.csbs)
@@ -137,7 +131,7 @@ export class AnimationSampler {
   interpolateValue(a, b, t, cubeSplineData) {
     switch (this.interpolation) {
       case "STEP":
-        return b // IDU
+        return a
       case "LINEAR":
         if (this.dim === quat) { //rotation -> quaternions
           return this.slerp(a, b, t)
@@ -228,7 +222,7 @@ export class AnimationSampler {
     const term4 = td * (t3 - t2)
 
     if (this.dim === 1) {
-      return term1 * a + term2 * aOutTangent + term3 * b + term4 * bOutTangent
+      return term1 * a + term2 * aOutTangent + term3 * b + term4 * bInTangent
     } else {
       const s1 = this.dim.create()
       const s2 = this.dim.create()
