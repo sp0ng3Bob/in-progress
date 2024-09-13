@@ -1,31 +1,73 @@
+import glMatrix from "glMatrix"
+
+const vec3 = glMatrix.vec3
+const mat4 = glMatrix.mat4
+
 /* Texture (UV) mapping */
-function calculatePlanarMapping(vertices) {
+function calculatePlanarMapping(vertices, projectionDirection = "Z") {
   const uvs = []
   for (let i = 0; i < vertices.length; i += 3) {
-    uvs.push(vertices[i] * 0.5 + 0.5, vertices[i + 2] * 0.5 + 0.5)
+    let u, v
+
+    if (projectionDirection === "X") {
+      u = vertices[i + 1] * 0.5 + 0.5 // Y
+      v = vertices[i + 2] * 0.5 + 0.5 // Z
+    } else if (projectionDirection === "Y") {
+      u = vertices[i] * 0.5 + 0.5     // X
+      v = vertices[i + 2] * 0.5 + 0.5 // Z
+    } else {  // Default: Z projection
+      u = vertices[i] * 0.5 + 0.5     // X
+      v = vertices[i + 1] * 0.5 + 0.5 // Y
+    }
+
+    uvs.push(u, v)
   }
   return new Float32Array(uvs)
 }
 
-function calculateCylindricalMapping(vertices) {
+function calculateCylindricalMapping(vertices, projectionDirection = "Y") {
   const uvs = []
   for (let i = 0; i < vertices.length; i += 3) {
-    const theta = Math.atan2(vertices[i + 2], vertices[i])
-    uvs.push((theta + Math.PI) / (2 * Math.PI), vertices[i + 1] * 0.5 + 0.5)
+    let theta, v
+
+    if (projectionDirection === "X") {
+      theta = Math.atan2(vertices[i + 2], vertices[i + 1])  // Z and Y
+      v = vertices[i] * 0.5 + 0.5                           // X
+    } else if (projectionDirection === "Z") {
+      theta = Math.atan2(vertices[i + 1], vertices[i])  // Y and X
+      v = vertices[i + 2] * 0.5 + 0.5                   // Z
+    } else {  // Default: Y projection
+      theta = Math.atan2(vertices[i + 2], vertices[i])  // Z and X
+      v = vertices[i + 1] * 0.5 + 0.5                   // Y
+    }
+
+    uvs.push((theta + Math.PI) / (2 * Math.PI), v)
   }
   return new Float32Array(uvs)
 }
 
-function calculateSphericalMapping(vertices) {
+function calculateSphericalMapping(vertices, projectionDirection = "Y") {
   const uvs = []
   for (let i = 0; i < vertices.length; i += 3) {
     const length = Math.sqrt(vertices[i] ** 2 + vertices[i + 1] ** 2 + vertices[i + 2] ** 2)
-    const theta = Math.atan2(vertices[i + 2], vertices[i])
-    const phi = Math.acos(vertices[i + 1] / length)
+    let theta, phi
+
+    if (projectionDirection === "X") {
+      theta = Math.atan2(vertices[i + 2], vertices[i + 1])  // Z and Y
+      phi = Math.acos(vertices[i] / length)                 // X
+    } else if (projectionDirection === "Z") {
+      theta = Math.atan2(vertices[i + 1], vertices[i])  // Y and X
+      phi = Math.acos(vertices[i + 2] / length)         // Z
+    } else {  // Default: Y projection
+      theta = Math.atan2(vertices[i + 2], vertices[i])  // Z and X
+      phi = Math.acos(vertices[i + 1] / length)         // Y
+    }
+
     uvs.push((theta + Math.PI) / (2 * Math.PI), phi / Math.PI)
   }
   return new Float32Array(uvs)
 }
+
 
 
 /* Texture transformation */
@@ -76,7 +118,7 @@ function getCurrentDataFromGeoModel(gl, glBuffer) {
   return data
 }
 
-function setUVBuffer(gl, model, newUVs) {
+export function setUVBuffer(gl, model, newUVs) {
   gl.bindBuffer(gl.ARRAY_BUFFER, model.uvs)
   gl.bufferData(gl.ARRAY_BUFFER, newUVs, gl.STATIC_DRAW)
 }
@@ -104,17 +146,14 @@ function setUVBuffer(gl, model, newUVs) {
 
 */
 export function updateMapping(bufferData, options) {
-  if (!options?.mapping) { return bufferData.uvs }
+  if (!options?.mapping) { return }
 
-  switch (options.mapping) {
-    case 'Planar':
-      return updateUVs(calculatePlanarMapping(bufferData.positions), options)
-    case 'Cylindrical':
-      return updateUVs(calculateCylindricalMapping(bufferData.positions), options)
-    case 'Spherical':
-      return updateUVs(calculateSphericalMapping(bufferData.positions), options)
-    default:
-      return bufferData.uvs
+  if ("Planar") {
+    bufferData.uvs = updateUVs(calculatePlanarMapping(bufferData.positions), options)
+  } else if ("Cylindrical") {
+    bufferData.uvs = updateUVs(calculateCylindricalMapping(bufferData.positions), options) //options.projectionDirection
+  } else if ("Spherical") {
+    bufferData.uvs = updateUVs(calculateSphericalMapping(bufferData.positions), options)
   }
 }
 

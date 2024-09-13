@@ -103,8 +103,9 @@ export class App extends Application {
     this.state = {
       // Canvas
       axesShown: true,
-      backgroundColor: [255, 255, 255],
+      backgroundColor: [227, 200, 200],
       showLogs: true,
+      drawLights: true,
 
       // Lights
       addAmbientLightColor: [200, 255, 200],
@@ -209,6 +210,8 @@ export class App extends Application {
     this.addPointLight("-1, -1, 0", [100, 255, 100])
     this.addPointLight("1, 1, 0", [127, 127, 255])
     this.addPointLight("1, -1, 0", [200, 120, 200])
+    this.addPointLight("0, 1, 1", [255, 120, 120])
+    this.addPointLight("0, -1, 1", [100, 255, 100])
 
     //this.initGUI()
     //**/!* /!*!/ * !/*!/*!/*!/!*/!* /!*/! * /!*/! * /!*!/ * !/**!/!*/!*/*!/*!/*!*!/*!/*!/*!/*!/*/ !* /!*/! * /!************?**?*??
@@ -235,6 +238,7 @@ export class App extends Application {
     const axesHelper = canvasFolder.add(this.state, "axesShown") //.listen() //.onChange(this.toggleAxesInScene)
     const bgColor = canvasFolder.addColor(this.state, "backgroundColor").onChange(this.setClearColor.bind(this))
     const logs = canvasFolder.add(this.state, "showLogs").onChange(this.toggleLogs.bind(this))
+    const drawLights = canvasFolder.add(this.state, "drawLights").listen()
 
     // Models controls.
     /* (2) Load 3D models in glTF 2.0 format and position them in space 
@@ -306,7 +310,7 @@ export class App extends Application {
     this.addLightFolder.add(this.state.newLightObject, "addLightPosition").name("Light position") // position,
     this.addLightFolder.addColor(this.state.newLightObject, "addLightColor").name("Light color") // color,
     this.addLightFolder.add(this.state.newLightObject, "addLightIntensity", 0, 10).name("Light intensity") // intensity
-    this.addLightFolder.add(this.state.newLightObject, "addLightAttenuationConstantFactor", 0, 1, 0.1).name("Constant atten.") // attenuation (constant, linear, quadratic attenuation)
+    this.addLightFolder.add(this.state.newLightObject, "addLightAttenuationConstantFactor", 0, 2, 0.1).name("Constant atten.") // attenuation (constant, linear, quadratic attenuation)
     this.addLightFolder.add(this.state.newLightObject, "addLightAttenuationLinearFactor", 0, 1, 0.01).name("Linear atten.") // attenuation (constant, linear, quadratic attenuation)
     this.addLightFolder.add(this.state.newLightObject, "addLightAttenuationQuadraticFactor", 0, 1, 0.001).name("Quadratic atten.") // attenuation (constant, linear, quadratic attenuation)
 
@@ -367,14 +371,14 @@ export class App extends Application {
     const geoRotation = addGeoFolder.add(this.state.newGeoObject, "rotation").name("Rotation").listen()
     const geoColor = addGeoFolder.addColor(this.state.newGeoObject, "color").name("Base color").listen()
 
-    const geoTextureFolder = addGeoFolder.addFolder("Texture")
-    const geoUV = geoTextureFolder.add(this.state.newGeoObject, "texture").name("Texture image").listen()
-    geoTextureFolder.add(this.state.newGeoObject.textureMapping, "mapping", ["UV", "Planar", "Cylindrical", "Spherical"]).listen().onChange(this.mappingChanged.bind(this))
-    const tx = geoTextureFolder.add(this.state.newGeoObject.textureMapping, "translateX", -1, 1, 0.1).onChange(this.updateUVs)
-    const ty = geoTextureFolder.add(this.state.newGeoObject.textureMapping, "translateY", -1, 1, 0.1).onChange(this.updateUVs)
-    const r = geoTextureFolder.add(this.state.newGeoObject.textureMapping, "rotate", 0, Math.PI * 2, 0.01).onChange(this.updateUVs)
-    const sx = geoTextureFolder.add(this.state.newGeoObject.textureMapping, "scaleX", 0.1, 2).onChange(this.updateUVs)
-    const sy = geoTextureFolder.add(this.state.newGeoObject.textureMapping, "scaleY", 0.1, 2).onChange(this.updateUVs)
+    const addGeoTextureFolder = addGeoFolder.addFolder("Texture")
+    const geoUV = addGeoTextureFolder.add(this.state.newGeoObject, "texture").name("Texture image").listen()
+    addGeoTextureFolder.add(this.state.newGeoObject.textureMapping, "mapping", ["UV", "Planar", "Cylindrical", "Spherical"]).listen().onChange(this.mappingChanged.bind(this))
+    const tx = addGeoTextureFolder.add(this.state.newGeoObject.textureMapping, "translateX", -1, 1, 0.1).onChange(this.updateUVs)
+    const ty = addGeoTextureFolder.add(this.state.newGeoObject.textureMapping, "translateY", -1, 1, 0.1).onChange(this.updateUVs)
+    const r = addGeoTextureFolder.add(this.state.newGeoObject.textureMapping, "rotate", 0, Math.PI * 2, 0.01).onChange(this.updateUVs)
+    const sx = addGeoTextureFolder.add(this.state.newGeoObject.textureMapping, "scaleX", 0.1, 2).onChange(this.updateUVs)
+    const sy = addGeoTextureFolder.add(this.state.newGeoObject.textureMapping, "scaleY", 0.1, 2).onChange(this.updateUVs)
 
     this.geoshadingModel = addGeoFolder.addFolder("Shading model")
     this.geoshadingModel.add(this.state.newGeoObject.shadingModel, "selectedShadingModel", ["Lambert", "Phong"]).name("Shading model").listen().onChange(this.toggleShadingModel.bind(this))
@@ -487,50 +491,24 @@ export class App extends Application {
       this.animFolder.domElement.style.display = "none"
     }
 
-    // Globals
-    //this.state.wrappingModeS = 33071
-    //this.state.wrappingModeT = 33071
-    //this.state.mipMaps = false
-    //this.state.minFilterMode = 9729
-    //this.state.magFilterMode = 9729
-    //this.globalFolder.domElement.style.display = ""
-
-    // this.morphCtrls.forEach((ctrl) => ctrl.remove())
-    // this.morphCtrls.length = 0
-    // this.morphFolder.domElement.style.display = "none"
-
-
-
-    /*if (morphMeshes.length) {
-      this.morphFolder.domElement.style.display = ""
-      morphMeshes.forEach((mesh) => {
-        if (mesh.morphTargetInfluences.length) {
-          const nameCtrl = this.morphFolder.add({name: mesh.name || "Untitled"}, "name")
-          this.morphCtrls.push(nameCtrl)
-        }
-        for (let i = 0; i < mesh.morphTargetInfluences.length; i++) {
-          const ctrl = this.morphFolder.add(mesh.morphTargetInfluences, i, 0, 1, 0.01).listen()
-          Object.keys(mesh.morphTargetDictionary).forEach((key) => {
-            if (key && mesh.morphTargetDictionary[key] === i) ctrl.name(key)
-          })
-          this.morphCtrls.push(ctrl)
-        }
-      })
-    }*/
-
-
-    //Lights
-    //this.updateGUIlightsList()
+    if (model === "") {
+      this.scene.nodes = [] // not really ideal. but it does the trick.
+      this.infoFolder.domElement.style.display = "none"
+      this.sceneFolder.domElement.style.display = "none"
+      this.cameraFolder.domElement.style.display = "none"
+      this.animFolder.domElement.style.display = "none"
+      this.modelTextures.domElement.style.display = "none"
+    }
   }
 
   updateGUIlightsList() {
     Object.keys(this.lightsList.__folders).forEach((f) => { this.lightsList.removeFolder(this.lightsList.__folders[f]) })
     for (let lightIndex in this.state.lightsList) {
       let lightFolder = this.lightsList.addFolder(lightIndex)
-      lightFolder.add(this.state.lightsList[lightIndex], "position").name("Light position").listen() //.onChange() -- change the position and color of the geoSpheres in the scene that reresent the lights
-      lightFolder.addColor(this.state.lightsList[lightIndex], "color").name("Light color").listen() //.onChange()
+      lightFolder.add(this.state.lightsList[lightIndex], "position").name("Light position").listen()
+      lightFolder.addColor(this.state.lightsList[lightIndex], "color").name("Light color").listen()
       lightFolder.add(this.state.lightsList[lightIndex], "intensity", 0, 10).name("Light intensity").listen()
-      lightFolder.add(this.state.lightsList[lightIndex], "constantAttenuation", 0, 1, 0.1).name("Constant atten.").listen()
+      lightFolder.add(this.state.lightsList[lightIndex], "constantAttenuation", 0, 2, 0.1).name("Constant atten.").listen()
       lightFolder.add(this.state.lightsList[lightIndex], "linearAttenuation", 0, 1, 0.01).name("Linear atten.").listen()
       lightFolder.add(this.state.lightsList[lightIndex], "quadraticAttenuation", 0, 1, 0.001).name("Quadratic atten.").listen()
     }
@@ -552,45 +530,45 @@ export class App extends Application {
       modelFolder.add(proceduralModelsList[geoIndex].geometry, "rotation").name("Rotation").listen().onChange((value) => this.updateGeoModelBuffers(geoIndex, { "rotation": value }))
       modelFolder.addColor(proceduralModelsList[geoIndex], "baseColor").name("Base color").listen()
 
-      const textureFolder = modelFolder.addFolder("Texture")
-      textureFolder.add(proceduralModelsList[geoIndex].texturing, "texture").name("Texture image").onChange((value) => this.updateGeoModelTexture(geoIndex, { "texture": value }))
+      const geoTextureFolderTmp = modelFolder.addFolder("Texture")
+      geoTextureFolderTmp.add(proceduralModelsList[geoIndex].texturing, "texture").name("Texture image").onChange((value) => this.updateGeoModelTexture(geoIndex, { "texture": value }))
       const updateTextureMappingsUI = () => {
         if (proceduralModelsList[geoIndex].texturing.textureMappings.mapping === "UV") {
-          textureFolder.__controllers[2].__li.style.display = "none"
-          textureFolder.__controllers[3].__li.style.display = "none"
-          textureFolder.__controllers[4].__li.style.display = "none"
-          textureFolder.__controllers[5].__li.style.display = "none"
-          textureFolder.__controllers[6].__li.style.display = "none"
+          geoTextureFolderTmp.__controllers[2].__li.style.display = "none"
+          geoTextureFolderTmp.__controllers[3].__li.style.display = "none"
+          geoTextureFolderTmp.__controllers[4].__li.style.display = "none"
+          geoTextureFolderTmp.__controllers[5].__li.style.display = "none"
+          geoTextureFolderTmp.__controllers[6].__li.style.display = "none"
         } else {
-          textureFolder.__controllers[2].__li.style.display = ""
-          textureFolder.__controllers[3].__li.style.display = ""
-          textureFolder.__controllers[4].__li.style.display = ""
-          textureFolder.__controllers[5].__li.style.display = ""
-          textureFolder.__controllers[6].__li.style.display = ""
+          geoTextureFolderTmp.__controllers[2].__li.style.display = ""
+          geoTextureFolderTmp.__controllers[3].__li.style.display = ""
+          geoTextureFolderTmp.__controllers[4].__li.style.display = ""
+          geoTextureFolderTmp.__controllers[5].__li.style.display = ""
+          geoTextureFolderTmp.__controllers[6].__li.style.display = ""
         }
       }
-      textureFolder.add(proceduralModelsList[geoIndex].texturing.textureMappings, "mapping", ["UV", "Planar", "Cylindrical", "Spherical"]).listen().onChange(() => updateTextureMappingsUI())
-      textureFolder.add(proceduralModelsList[geoIndex].texturing.textureMappings, "translateX", -1, 1, 0.1).onChange((value) => this.updateGeoModelTextureMapping(geoIndex, { "translateX": value }))
-      textureFolder.add(proceduralModelsList[geoIndex].texturing.textureMappings, "translateY", -1, 1, 0.1).onChange((value) => this.updateGeoModelTextureMapping(geoIndex, { "translateY": value }))
-      textureFolder.add(proceduralModelsList[geoIndex].texturing.textureMappings, "rotate", 0, Math.PI * 2, 0.01).onChange((value) => this.updateGeoModelTextureMapping(geoIndex, { "rotate": value }))
-      textureFolder.add(proceduralModelsList[geoIndex].texturing.textureMappings, "scaleX", 0.1, 2).onChange((value) => this.updateGeoModelTextureMapping(geoIndex, { "scaleX": value }))
-      textureFolder.add(proceduralModelsList[geoIndex].texturing.textureMappings, "scaleY", 0.1, 2).onChange((value) => this.updateGeoModelTextureMapping(geoIndex, { "scaleY": value }))
+      geoTextureFolderTmp.add(proceduralModelsList[geoIndex].texturing.textureMappings, "mapping", ["UV", "Planar", "Cylindrical", "Spherical"]).listen().onChange(() => updateTextureMappingsUI())
+      geoTextureFolderTmp.add(proceduralModelsList[geoIndex].texturing.textureMappings, "translateX", -1, 1, 0.1).onChange((value) => this.updateGeoModelTextureMapping(geoIndex, { "translateX": value }))
+      geoTextureFolderTmp.add(proceduralModelsList[geoIndex].texturing.textureMappings, "translateY", -1, 1, 0.1).onChange((value) => this.updateGeoModelTextureMapping(geoIndex, { "translateY": value }))
+      geoTextureFolderTmp.add(proceduralModelsList[geoIndex].texturing.textureMappings, "rotate", 0, Math.PI * 2, 0.01).onChange((value) => this.updateGeoModelTextureMapping(geoIndex, { "rotate": value }))
+      geoTextureFolderTmp.add(proceduralModelsList[geoIndex].texturing.textureMappings, "scaleX", 0.1, 2).onChange((value) => this.updateGeoModelTextureMapping(geoIndex, { "scaleX": value }))
+      geoTextureFolderTmp.add(proceduralModelsList[geoIndex].texturing.textureMappings, "scaleY", 0.1, 2).onChange((value) => this.updateGeoModelTextureMapping(geoIndex, { "scaleY": value }))
       updateTextureMappingsUI()
 
-      const shadingModel = modelFolder.addFolder("Shading model")
+      const geoShadingModel = modelFolder.addFolder("Shading model")
       const updateShadingModelUI = () => {
         if (proceduralModelsList[geoIndex].shadingModel.type === "Lambert") {
-          shadingModel.__controllers[2].__li.style.display = "none"
-          shadingModel.__controllers[3].__li.style.display = "none"
+          geoShadingModel.__controllers[2].__li.style.display = "none"
+          geoShadingModel.__controllers[3].__li.style.display = "none"
         } else {
-          shadingModel.__controllers[2].__li.style.display = ""
-          shadingModel.__controllers[3].__li.style.display = ""
+          geoShadingModel.__controllers[2].__li.style.display = ""
+          geoShadingModel.__controllers[3].__li.style.display = ""
         }
       }
-      shadingModel.add(proceduralModelsList[geoIndex].shadingModel, "type", ["Lambert", "Phong"]).name("Shading model").listen().onChange(() => updateShadingModelUI())
-      shadingModel.addColor(proceduralModelsList[geoIndex].shadingModel, "diffuseColor").name("Diffuse color").listen()
-      shadingModel.addColor(proceduralModelsList[geoIndex].shadingModel, "specularColor").name("Specular color").listen()
-      shadingModel.add(proceduralModelsList[geoIndex].shadingModel, "shininess", 0, 300, 1).name("Shininess").listen()
+      geoShadingModel.add(proceduralModelsList[geoIndex].shadingModel, "type", ["Lambert", "Phong"]).name("Shading model").listen().onChange(() => updateShadingModelUI())
+      geoShadingModel.addColor(proceduralModelsList[geoIndex].shadingModel, "diffuseColor").name("Diffuse color").listen()
+      geoShadingModel.addColor(proceduralModelsList[geoIndex].shadingModel, "specularColor").name("Specular color").listen()
+      geoShadingModel.add(proceduralModelsList[geoIndex].shadingModel, "shininess", 0, 300, 1).name("Shininess").listen()
       updateShadingModelUI()
     }
   }
@@ -1107,23 +1085,21 @@ export class App extends Application {
 
     this.state.lookingAt = vec3.fromValues((min[0] + max[0]) / 2, (min[1] + max[1]) / 2, (min[2] + max[2]) / 2)
     this.state.eye = vec3.fromValues(...this.state.lookingAt)
-    this.state.eye[2] = modelSizeZ == 0 ? 4 : modelSizeZ * 2
+    this.state.eye[2] = modelSizeZ == 0 ? 4 : modelSizeZ * 5
 
     mat4.lookAt(viewMatrix, this.state.eye, this.state.lookingAt, [0, 1, 0])
 
-    const fov = Math.PI / 4 //2 * Math.atan(maxModelSize / Math.abs(this.state.eye[2] * 2))
+    const fov = Math.PI / 3
     const freeCamera = new PerspectiveCamera({
       //aspect: this.canvas.clientWidth / this.canvas.clientHeight,
       fov: fov,
       near: 0.01, //maxModelSize / 10,
-      //far: maxModelSize * 25
+      far: 1000
     })
-    const vpMatrix = mat4.create()
-    //mat4.invert(viewMatrix, viewMatrix)
-    mat4.multiply(vpMatrix, freeCamera.matrix, viewMatrix)
+    mat4.invert(viewMatrix, viewMatrix)
     let options = {
       "camera": freeCamera,
-      "matrix": vpMatrix
+      "matrix": viewMatrix
     }
 
     camerasList = {}
@@ -1140,24 +1116,26 @@ export class App extends Application {
     this.state.selectedCamera = this.cameras.length > 1 ? 1 : 0
     this.camera = this.cameras[this.state.selectedCamera]
     this.camera.lookingAt = this.state.lookingAt
-    this.controls.setOrbitCenter(this.camera.lookingAt)
 
     this.cameras[this.freeCamera].translation = vec3.fromValues(...this.state.eye)
-    //this.cameras[this.freeCamera].translation[2] = modelSizeZ == 0 ? 4 : modelSizeZ * 2
     this.cameras[this.freeCamera].updateMatrix()
+
+    this.controls.updateCamera(this.camera)
+    this.controls.setOrbitCenter(this.camera.lookingAt)
   }
 
   setupFreeCamera() {
     const viewMatrix = mat4.create()
     mat4.lookAt(viewMatrix, [0, 2, 5], [0, 0, 0], [0, 1, 0])
     const freeCamera = new PerspectiveCamera({
-      //aspect: this.canvas.clientWidth / this.canvas.clientHeight
+      fov: Math.PI / 3,
+      near: 0.01,
+      far: 1000
     })
-    const vpMatrix = mat4.create()
-    mat4.multiply(vpMatrix, freeCamera.matrix, viewMatrix)
+    mat4.invert(viewMatrix, viewMatrix)
     let options = {
       "camera": freeCamera,
-      "matrix": vpMatrix
+      "matrix": viewMatrix
     }
 
     camerasList = {}
@@ -1210,6 +1188,13 @@ export class App extends Application {
   async render() {
     if (this.renderer) {
 
+      /* Random shiet */
+      if (this.state.rotateModelEnabled) {
+        //this.rotateGltfModel(this.scene.nodes, [0, 0.5, 0])
+        //await this.rotateGeoModels(proceduralModelsList, [0, 0.5, 0])
+        this.controls.rotate(undefined, 5, 0)
+      } // over Y
+
       /* glTF Animations */
       if (this.animationsPlayer.animations && this.animationsPlayer.isPlaying) {
         const deltaTime = (performance.now() - this.lastTime) / 1000
@@ -1233,19 +1218,12 @@ export class App extends Application {
       /* glTF Skinning matrix - TODO */
 
 
-      //this.renderer.prepareScene(this.scene)
       this.scene.geoNodes = [...proceduralModelsList]
-      this.scene.lights = [...globalLightsList]
+      this.scene.lights = this.state.drawLights ? [...globalLightsList] : []
       this.renderer.render(this.scene, this.camera, this.lights())
 
       /* Draw axes */
       if (this.state.axesShown) { this.axes.draw(this.camera) }
-
-      /* Random shiet */
-      if (this.state.rotateModelEnabled) {
-        this.rotateGltfModel(this.scene.nodes, [0, 0.5, 0])
-        await this.rotateGeoModels(proceduralModelsList, [0, 0.5, 0])
-      } // over Y
     }
   }
 

@@ -38,6 +38,10 @@ export class Node {
       child.parent = this
     }
     this.parent = null
+
+    //this.hasTransparentProperties = options.transparent || false
+    this.transparrentPrimitives = [...(options.transparrentPrimitives ?? [])]
+    this.opaquePrimitives = [...(options.opaquePrimitives ?? [])]
   }
 
   updateMatrix() {

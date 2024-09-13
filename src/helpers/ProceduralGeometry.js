@@ -1,11 +1,18 @@
 import { WebGL } from "../engine/WebGL.js"
+
 import {
   getNormalisedRGB,
   getUnsignedRGB,
   getPositionNormalised,
   getPositionString
 } from "./PointLight.js"
-import { updateMapping, fetchImage } from "./Textures.js"
+
+import {
+  updateMapping,
+  fetchImage,
+  setUVBuffer
+} from "./Textures.js"
+
 import glMatrix from "glMatrix"
 
 const vec3 = glMatrix.vec3
@@ -58,6 +65,12 @@ async function prepareBuffers(gl, program, bufferData, color, textureImage) {
     texture,
     sampler,
     baseColor,
+    buffers: {
+      positions: positionBuffer,
+      indices: indexBuffer,
+      normals: normalBuffer,
+      uvs: uvBuffer
+    }
   }
 }
 
@@ -293,7 +306,7 @@ async function setUpTexture(gl, textureImage) {
 
 export async function createPlane(gl, program, options) {
   const bufferData = createPlaneGeometry(options.size, options.position, options.rotation)
-  bufferData.uvs = updateMapping(bufferData, options.textureMappingOptions)
+  updateMapping(bufferData, options.textureMappingOptions)
   const outModel = await prepareBuffers(gl, program, bufferData, options.material.color, options.texture)
   outModel.type = "Plane"
   outModel.bufferData = bufferData
@@ -317,7 +330,7 @@ export async function createPlane(gl, program, options) {
 
 export async function createCube(gl, program, options) {
   const bufferData = createCubeGeometry(options.size, options.position, options.rotation)
-  bufferData.uvs = updateMapping(bufferData, options.textureMappingOptions)
+  updateMapping(bufferData, options.textureMappingOptions)
   const outModel = await prepareBuffers(gl, program, bufferData, options.material.color, options.texture)
   outModel.type = "Cube"
   outModel.bufferData = bufferData
@@ -341,7 +354,7 @@ export async function createCube(gl, program, options) {
 
 export async function createSphere(gl, program, options) {
   const bufferData = createSphereGeometry(options.radius, options.position, options.rotation, options.latBands, options.lonBands)
-  bufferData.uvs = updateMapping(bufferData, options.textureMappingOptions)
+  updateMapping(bufferData, options.textureMappingOptions)
   const outModel = await prepareBuffers(gl, program, bufferData, options.material.color, options.texture)
   outModel.type = "Sphere"
   outModel.bufferData = bufferData
@@ -367,7 +380,7 @@ export async function createSphere(gl, program, options) {
 
 export async function createTorus(gl, program, options) {
   const bufferData = createTorusGeometry(options.radius, options.holeRadius, options.position, options.rotation, options.radialSegments, options.tubularSegments)
-  bufferData.uvs = updateMapping(bufferData, options.textureMappingOptions)
+  updateMapping(bufferData, options.textureMappingOptions)
   const outModel = await prepareBuffers(gl, program, bufferData, options.material.color, options.texture)
   outModel.type = "Torus"
   outModel.bufferData = bufferData
@@ -413,6 +426,7 @@ export async function updateGeoBuffers(gl, program, model) {
       return
   }
 
+
   const newModel = await prepareBuffers(gl, program, bufferData, model.baseColor, "")
 
   model.vao = newModel.vao
@@ -420,11 +434,14 @@ export async function updateGeoBuffers(gl, program, model) {
 }
 
 export async function updateGeoTexture(gl, model) {
+  gl.bindVertexArray(model.vao)
   const newTex = await setUpTexture(gl, model.texturing.texture)
   model.texture = newTex
 }
 
 export async function updateGeoTextureMapping(gl, program, model) {
-  model.uvs = updateMapping(model.bufferData, model.texturing.textureMappings)
-  const uvBuffer = createAndBindBuffer(gl, model.uvs, { attr: program.attributes.aTexCoord, size: 2, type: gl.FLOAT })
+  updateMapping(model.bufferData, model.texturing.textureMappings)
+  gl.bindVertexArray(model.vao)
+  //setUVBuffer(gl, model.buffers.uvs, model.bufferData.uvs)
+  model.buffers.uvs = createAndBindBuffer(gl, model.bufferData.uvs, { attr: program.attributes.aTexCoord, size: 2, type: gl.FLOAT })
 }

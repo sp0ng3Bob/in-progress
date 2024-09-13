@@ -19,7 +19,7 @@ export class Renderer {
     //delete shaderSources.simple
     this.programs = WebGL.buildPrograms(gl, shaderSources) //simple) // COMPILING AXES SHADER TWO TIMES!!!!!!!
 
-    this.gl.clearColor(1, 1, 1, 1)
+    this.gl.clearColor(0.89, 0.78, 0.78, 1)
 
     //this.gl.enable(this.gl.CULL_FACE)
     //this.gl.cullFace(this.gl.BACK)

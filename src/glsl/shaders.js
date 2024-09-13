@@ -286,7 +286,9 @@ void main() {
   if (uHasEmissiveTexture == 1) {
     vec3 emissive = texture(uEmissiveTexture, textureCoords).rgb * uEmissiveFactor;
     finalColor += emissive;
-  }
+  } /*else {
+    finalColor += uEmissiveFactor;
+  }*/
 
   // Occlusion map
   if (uHasOcclusionTexture == 1) {

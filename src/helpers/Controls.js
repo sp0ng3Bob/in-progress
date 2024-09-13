@@ -38,13 +38,47 @@ export class Controls {
     vec3.copy(this.orbitCenter, center)
   }
 
+  calculateCameraDirection() {
+    // Calculate the direction vector
+    /*const directionVector = {
+      x: this.orbitCenter[0] - this.camera.translation[0],
+      y: this.orbitCenter[1] - this.camera.translation[1],
+      z: this.orbitCenter[2] - this.camera.translation[2]
+    }
+
+    // Calculate the magnitude of the direction vector
+    const magnitude = Math.sqrt(
+      directionVector.x * directionVector.x +
+      directionVector.y * directionVector.y +
+      directionVector.z * directionVector.z
+    )
+
+    // Normalize the direction vector
+    return {
+      x: directionVector.x / magnitude,
+      y: directionVector.y / magnitude,
+      z: directionVector.z / magnitude
+    }*/
+
+    // Calculate the direction vector
+    const direction = vec3.create()
+    vec3.subtract(direction, this.orbitCenter, this.camera.translation)
+
+    // Normalize the direction vector
+    vec3.normalize(direction, direction)
+    return direction
+  }
+
   zoomOut() {
-    const zoomSpeed = 0.2 // Adjust the zoom speed as needed
-    //if (Math.abs(camera.translation[2] - zoomSpeed * this.zoomFactor) > 0.01) {
+    const zoomSpeed = 0.1 // Adjust the zoom speed as needed
+    const direction = this.calculateCameraDirection()
+
     const sign = this.camera.translation[2] < 0 ? -1 : 1
-    this.camera.translation[2] += sign * zoomSpeed * this.zoomFactor
+    this.camera.translation[0] += direction[0] * zoomSpeed * this.zoomFactor * sign
+    this.camera.translation[1] += direction[1] * zoomSpeed * this.zoomFactor * sign
+    this.camera.translation[2] += direction[2] * zoomSpeed * this.zoomFactor * sign
+
     this.camera.updateMatrix()
-    //}
   }
 
   onDragStart(e) {
@@ -135,24 +169,14 @@ export class Controls {
         this.lastPinchDistance = distance
       }
     } else {
-      //e.preventDefault()
-      //console.log()
+      const direction = this.calculateCameraDirection()
 
-      /*const delta = e.deltaY * zoomSpeed * this.zoomFactor
-      const newTranslationZ = this.camera.translation[2] + delta
-  
-      // Ensure that translation[2] moves towards zero without crossing it
-      if ((this.camera.translation[2] > 0 && newTranslationZ >= 0) || (this.camera.translation[2] < 0 && newTranslationZ <= 0)) {
-        this.camera.translation[2] = newTranslationZ
-      } else {
-        // If the new translation would cross zero, set it to zero
-        this.camera.translation[2] = 0
-      }*/
+      const sign = this.camera.translation[2] < 0 ? -1 : 1
+      this.camera.translation[0] += direction[0] * zoomSpeed * this.zoomFactor * e.deltaY * sign
+      this.camera.translation[1] += direction[1] * zoomSpeed * this.zoomFactor * e.deltaY * sign
+      this.camera.translation[2] += direction[2] * zoomSpeed * this.zoomFactor * e.deltaY * sign
 
-      if (Math.abs(this.camera.translation[2] + e.deltaY * zoomSpeed * this.zoomFactor) > 0.01) {
-        this.camera.translation[2] += e.deltaY * zoomSpeed * this.zoomFactor //e.deltaY * this.zoomFactor
-        this.camera.updateMatrix()
-      }
+      this.camera.updateMatrix()
     }
 
   }
@@ -260,10 +284,11 @@ export class Controls {
   rotate(e, deltaX, deltaY) {
     if (!this.camera) return
 
-    const rotationSpeed = (Math.PI / 180) * (e.shiftKey ? 3 : 1) * this.zoomFactor
+    const rotationSpeed = (Math.PI / 180) * (e?.shiftKey ? 3 : 1) * this.zoomFactor
     const rotationQuat = quat.create()
+    quat.rotateX(rotationQuat, rotationQuat, deltaY * rotationSpeed) // IS THIS RIGHT, OR AM I MISSING SOMETHING?
+    quat.invert(rotationQuat, rotationQuat)
     quat.rotateY(rotationQuat, rotationQuat, -deltaX * rotationSpeed)
-    quat.rotateX(rotationQuat, rotationQuat, -deltaY * rotationSpeed)
 
     // Rotate around the orbit center
     const cameraPosition = vec3.sub(vec3.create(), this.camera.translation, this.orbitCenter)

@@ -485,7 +485,6 @@ export class GLTFLoader {
     }
 
     const options = { ...gltfSpec, children: [] }
-    console.log(nameOrIndex, this.cache, gltfSpec)
 
     if (gltfSpec.children !== undefined) {
       for (const nodeIndex of gltfSpec.children) {
@@ -500,6 +499,16 @@ export class GLTFLoader {
 
     if (gltfSpec.mesh !== undefined) {
       options.mesh = await this.loadMesh(gltfSpec.mesh)
+
+      /*options.transparrentPrimitives = []
+      options.opaquePrimitives = []
+      for (let primitive of options.mesh.primitives) {
+        if (primitive.material.alphaMode === "BLEND") {
+          options.transparrentPrimitives.push(primitive)
+        } else {
+
+        }
+      }*/
     }
 
     if (gltfSpec.skin !== undefined) {
