@@ -149,11 +149,13 @@ export function updateMapping(bufferData, options) {
   if (!options?.mapping) { return }
 
   if ("Planar") {
-    bufferData.uvs = updateUVs(calculatePlanarMapping(bufferData.positions), options)
+    bufferData.uvs = updateUVs(calculatePlanarMapping(bufferData.positions, options.projectionDirection), options)
   } else if ("Cylindrical") {
-    bufferData.uvs = updateUVs(calculateCylindricalMapping(bufferData.positions), options) //options.projectionDirection
+    bufferData.uvs = updateUVs(calculateCylindricalMapping(bufferData.positions, options.projectionDirection), options) //options.projectionDirection
   } else if ("Spherical") {
-    bufferData.uvs = updateUVs(calculateSphericalMapping(bufferData.positions), options)
+    bufferData.uvs = updateUVs(calculateSphericalMapping(bufferData.positions, options.projectionDirection), options)
+  } else {
+    bufferData.uvs = updateUVs(bufferData.uvs, options)
   }
 }
 

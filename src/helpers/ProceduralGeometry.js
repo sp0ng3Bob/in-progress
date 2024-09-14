@@ -44,7 +44,7 @@ function createAndBindBuffer(gl, data, attribute = undefined, target = undefined
   return buffer
 }
 
-async function prepareBuffers(gl, program, bufferData, color, textureImage) {
+async function prepareBuffers(gl, program, bufferData, color, textureImage, textureImageBlob) {
   const { positions, normals, indices, uvs } = bufferData
 
   const vao = gl.createVertexArray()
@@ -55,7 +55,7 @@ async function prepareBuffers(gl, program, bufferData, color, textureImage) {
   const indexBuffer = createAndBindBuffer(gl, indices, null, gl.ELEMENT_ARRAY_BUFFER)
   const uvBuffer = createAndBindBuffer(gl, uvs, { attr: program.attributes.aTexCoord, size: 2, type: gl.FLOAT })
 
-  const texture = await setUpTexture(gl, textureImage)
+  const texture = await setUpTexture(gl, textureImage, textureImageBlob)
   const sampler = WebGL.createSampler(gl, { wrapS: gl.REPEAT, wrapT: gl.REPEAT, min: gl.NEAREST_MIPMAP_LINEAR, mag: gl.LINEAR })
   const baseColor = color
 
@@ -281,20 +281,36 @@ function createTorusGeometry(outerRadius = 1, innerRadius = 0.4, position = [0, 
   }
 }
 
-async function setUpTexture(gl, textureImage) {
+async function setUpTexture(gl, textureImage, textureImageBlob) {
   if (textureImage != "") {
     try {
-      const image = await fetchImage(new URL(textureImage, window.location))
-      const texture = WebGL.createTexture(gl, {
-        image,
-        mip: true,
-        wrapS: gl.REPEAT,
-        wrapT: gl.REPEAT,
-        min: gl.NEAREST_MIPMAP_LINEAR,
-        mag: gl.LINEAR,
-      })
+      if (textureImageBlob) {
+        const image = textureImageBlob
+        const texture = WebGL.createTexture(gl, {
+          image,
+          mip: true,
+          wrapS: gl.REPEAT,
+          wrapT: gl.REPEAT,
+          min: gl.NEAREST_MIPMAP_LINEAR,
+          mag: gl.LINEAR,
+        })
 
-      return texture
+        return texture
+      } else {
+        const url = new URL(textureImage, window.location)
+        const image = await fetchImage(url)
+        const texture = WebGL.createTexture(gl, {
+          image,
+          mip: true,
+          wrapS: gl.REPEAT,
+          wrapT: gl.REPEAT,
+          min: gl.NEAREST_MIPMAP_LINEAR,
+          mag: gl.LINEAR,
+        })
+
+        return texture
+      }
+
     } catch (error) {
       console.error('Error loading image:', error)
       return undefined
@@ -306,8 +322,8 @@ async function setUpTexture(gl, textureImage) {
 
 export async function createPlane(gl, program, options) {
   const bufferData = createPlaneGeometry(options.size, options.position, options.rotation)
-  updateMapping(bufferData, options.textureMappingOptions)
-  const outModel = await prepareBuffers(gl, program, bufferData, options.material.color, options.texture)
+  updateMapping(bufferData, options.textureMappings)
+  const outModel = await prepareBuffers(gl, program, bufferData, options.material.color, options.texture, options.textureBlob)
   outModel.type = "Plane"
   outModel.bufferData = bufferData
   outModel.geometry = {
@@ -317,7 +333,7 @@ export async function createPlane(gl, program, options) {
   }
   outModel.texturing = {
     texture: options.texture,
-    textureMappings: options.textureMappingOptions
+    textureMappings: options.textureMappings
   }
   outModel.shadingModel = {
     type: options.material.type,
@@ -330,8 +346,8 @@ export async function createPlane(gl, program, options) {
 
 export async function createCube(gl, program, options) {
   const bufferData = createCubeGeometry(options.size, options.position, options.rotation)
-  updateMapping(bufferData, options.textureMappingOptions)
-  const outModel = await prepareBuffers(gl, program, bufferData, options.material.color, options.texture)
+  updateMapping(bufferData, options.textureMappings)
+  const outModel = await prepareBuffers(gl, program, bufferData, options.material.color, options.texture, options.textureBlob)
   outModel.type = "Cube"
   outModel.bufferData = bufferData
   outModel.geometry = {
@@ -341,7 +357,7 @@ export async function createCube(gl, program, options) {
   }
   outModel.texturing = {
     texture: options.texture,
-    textureMappings: options.textureMappingOptions
+    textureMappings: options.textureMappings
   }
   outModel.shadingModel = {
     type: options.material.type,
@@ -354,8 +370,8 @@ export async function createCube(gl, program, options) {
 
 export async function createSphere(gl, program, options) {
   const bufferData = createSphereGeometry(options.radius, options.position, options.rotation, options.latBands, options.lonBands)
-  updateMapping(bufferData, options.textureMappingOptions)
-  const outModel = await prepareBuffers(gl, program, bufferData, options.material.color, options.texture)
+  updateMapping(bufferData, options.textureMappings)
+  const outModel = await prepareBuffers(gl, program, bufferData, options.material.color, options.texture, options.textureBlob)
   outModel.type = "Sphere"
   outModel.bufferData = bufferData
   outModel.geometry = {
@@ -367,7 +383,7 @@ export async function createSphere(gl, program, options) {
   }
   outModel.texturing = {
     texture: options.texture,
-    textureMappings: options.textureMappingOptions
+    textureMappings: options.textureMappings
   }
   outModel.shadingModel = {
     type: options.material.type,
@@ -380,8 +396,8 @@ export async function createSphere(gl, program, options) {
 
 export async function createTorus(gl, program, options) {
   const bufferData = createTorusGeometry(options.radius, options.holeRadius, options.position, options.rotation, options.radialSegments, options.tubularSegments)
-  updateMapping(bufferData, options.textureMappingOptions)
-  const outModel = await prepareBuffers(gl, program, bufferData, options.material.color, options.texture)
+  updateMapping(bufferData, options.textureMappings)
+  const outModel = await prepareBuffers(gl, program, bufferData, options.material.color, options.texture, options.textureBlob)
   outModel.type = "Torus"
   outModel.bufferData = bufferData
   outModel.geometry = {
@@ -394,7 +410,7 @@ export async function createTorus(gl, program, options) {
   }
   outModel.texturing = {
     texture: options.texture,
-    textureMappings: options.textureMappingOptions
+    textureMappings: options.textureMappings
   }
   outModel.shadingModel = {
     type: options.material.type,
@@ -435,7 +451,7 @@ export async function updateGeoBuffers(gl, program, model) {
 
 export async function updateGeoTexture(gl, model) {
   gl.bindVertexArray(model.vao)
-  const newTex = await setUpTexture(gl, model.texturing.texture)
+  const newTex = await setUpTexture(gl, model.texturing.texture, model.texturing.textureBlob)
   model.texture = newTex
 }
 

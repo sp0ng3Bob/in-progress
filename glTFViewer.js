@@ -9,6 +9,7 @@ import { PerspectiveCamera } from "./src/gltf/PerspectiveCamera.js"
 import { OrthographicCamera } from "./src/gltf/OrthographicCamera.js"
 import { AnimationsPlayer } from "./src/gltf/AnimationsPlayer.js"
 
+import { FileInput } from "./src/helpers/FileInput.js"
 import { Axes } from "./src/helpers/Axes.js"
 import { Controls } from "./src/helpers/Controls.js"
 import { PointLight, getPositionNormalised, getPositionString } from "./src/helpers/PointLight.js"
@@ -95,10 +96,14 @@ let proceduralModelsList = [] //{}
 const mipmapsList = { "NEAREST_MIPMAP_NEAREST": 9984, "NEAREST_MIPMAP_LINEAR": 9986, "LINEAR_MIPMAP_NEAREST": 9985, "LINEAR_MIPMAP_LINEAR": 9987 }
 const wrappingList = { "Clamp to edge": 33071, "Mirrored repeat": 33648, "Repeat": 10497 }
 const filteringList = { "Linear": 9729, "Nearest": 9728 }
+const projectionDirections = { "X": [1, 0, 0], "Y": [0, 1, 0], "Z": [0, 0, 1] }
 
 export class App extends Application {
-  async init(logsDOMElement) {
+  async init(logsDOMElement, fileChooser) {
     this.gui = null
+
+    // For uploading textures (and other stuff)
+    this.fileChooser = new FileInput(fileChooser)
 
     this.state = {
       // Canvas
@@ -147,8 +152,10 @@ export class App extends Application {
         rotation: "0, 0, 0, 1",
         color: [127, 127, 255],
         texture: "./src/models/1Avocado/glTF/Avocado_baseColor.png",
+        textureBlob: undefined,
         textureMapping: {
           mapping: "UV",
+          projectionDirection: [1, 0, 0],
           translateX: 0,
           translateY: 0,
           rotate: 0,
@@ -186,8 +193,8 @@ export class App extends Application {
       //mvpMatrix: this.camera.camera.matrix
     })
 
+
     this.logs = logsDOMElement
-    this.fileChooser = document.querySelector("#localFileChooser")
 
     // glTF animations player
     this.animationsPlayer = new AnimationsPlayer()
@@ -248,7 +255,7 @@ export class App extends Application {
     this.modelsFolder.add(this.state, "gltfPositioning").listen()
     this.modelSelector = this.modelsFolder.add(this.state, "selectedModel", { ...modelList, ...{ "-v- Embeded glLTs -v-": "" }, ...modelListCORS }).onChange(this.changeModel.bind(this))
     this.modelsFolder.add(this.state, "selectedModel").listen().onFinishChange(this.changeModel.bind(this)) //.domElement.children[0].setAttribute("disabled", "disabled") //.onFinishChange(this.changeModel.bind(this))
-    //this.modelsFolder.add(this.state, "selectedModel").onFinishChange(this.changeModelWithUrl.bind(this))
+    this.modelsFolder.add(this, "userGltfFile").name("File on computer") //.onChange(this.userGltfFile.bind(this))
     this.modelsFolder.open()
 
     // Model information controls
@@ -280,18 +287,19 @@ export class App extends Application {
     this.modelTextures = this.modelsFolder.addFolder("Model textures controls")
     const base = this.modelTextures.addFolder("Base texture")
     //uniform vec4 uBaseColor; + plus texture with file chooser option - TODO
+    base.add(this, "userGltfTextureFile").name("File on computer") //.onChange(this.userGltfTextureFile.bind(this))
 
-    this.modelTextures.addFolder("Normal texture")
+    //this.modelTextures.addFolder("Normal texture")
     //uniform float uNormalTextureScale;
 
-    this.modelTextures.addFolder("Emissive texture")
+    //this.modelTextures.addFolder("Emissive texture")
     //uniform vec3 uEmissiveFactor;
 
-    this.modelTextures.addFolder("Metallic-Roughness texture")
+    //this.modelTextures.addFolder("Metallic-Roughness texture")
     //uniform float uMetallicFactor;
     //uniform float uRoughnessFactor;
 
-    this.modelTextures.addFolder("Occlusion texture")
+    //this.modelTextures.addFolder("Occlusion texture")
     //uniform float uOcclusionStrength;
 
     this.modelTextures.domElement.style.display = "none"
@@ -372,13 +380,15 @@ export class App extends Application {
     const geoColor = addGeoFolder.addColor(this.state.newGeoObject, "color").name("Base color").listen()
 
     const addGeoTextureFolder = addGeoFolder.addFolder("Texture")
+    const geoTextureFileChooser = addGeoTextureFolder.add(this, "userGeoTextureFile").name("File on computer") //.onChange(this.userGeoTextureFile.bind(this))
     const geoUV = addGeoTextureFolder.add(this.state.newGeoObject, "texture").name("Texture image").listen()
     addGeoTextureFolder.add(this.state.newGeoObject.textureMapping, "mapping", ["UV", "Planar", "Cylindrical", "Spherical"]).listen().onChange(this.mappingChanged.bind(this))
-    const tx = addGeoTextureFolder.add(this.state.newGeoObject.textureMapping, "translateX", -1, 1, 0.1).onChange(this.updateUVs)
-    const ty = addGeoTextureFolder.add(this.state.newGeoObject.textureMapping, "translateY", -1, 1, 0.1).onChange(this.updateUVs)
-    const r = addGeoTextureFolder.add(this.state.newGeoObject.textureMapping, "rotate", 0, Math.PI * 2, 0.01).onChange(this.updateUVs)
-    const sx = addGeoTextureFolder.add(this.state.newGeoObject.textureMapping, "scaleX", 0.1, 2).onChange(this.updateUVs)
-    const sy = addGeoTextureFolder.add(this.state.newGeoObject.textureMapping, "scaleY", 0.1, 2).onChange(this.updateUVs)
+    const pd = addGeoTextureFolder.add(this.state.newGeoObject.textureMapping, "projectionDirection", projectionDirections).listen()
+    const tx = addGeoTextureFolder.add(this.state.newGeoObject.textureMapping, "translateX", -1, 1, 0.1)
+    const ty = addGeoTextureFolder.add(this.state.newGeoObject.textureMapping, "translateY", -1, 1, 0.1)
+    const r = addGeoTextureFolder.add(this.state.newGeoObject.textureMapping, "rotate", 0, Math.PI * 2, 0.01)
+    const sx = addGeoTextureFolder.add(this.state.newGeoObject.textureMapping, "scaleX", 0.1, 2)
+    const sy = addGeoTextureFolder.add(this.state.newGeoObject.textureMapping, "scaleY", 0.1, 2)
 
     this.geoshadingModel = addGeoFolder.addFolder("Shading model")
     this.geoshadingModel.add(this.state.newGeoObject.shadingModel, "selectedShadingModel", ["Lambert", "Phong"]).name("Shading model").listen().onChange(this.toggleShadingModel.bind(this))
@@ -389,6 +399,7 @@ export class App extends Application {
     geoInnerHole.__li.style.display = "none"
     geoLatBands.__li.style.display = "none"
     geoLonBands.__li.style.display = "none"
+    pd.__li.style.display = "none"
     tx.__li.style.display = "none"
     ty.__li.style.display = "none"
     r.__li.style.display = "none"
@@ -397,7 +408,7 @@ export class App extends Application {
     this.geoshadingModel.__controllers.at(-2).__li.style.display = "none"
     this.geoshadingModel.__controllers.at(-1).__li.style.display = "none"
     this.geometryActions.push([geoSize, geoPosition, geoRotation, geoColor, geoUV, geoInnerHole, geoLatBands, geoLonBands])
-    this.geometryActions.push([tx, ty, r, sx, sy])
+    this.geometryActions.push([pd, tx, ty, r, sx, sy])
 
     const geomListFolder = this.geometryFolder.addFolder("List of added geometries")
     geomListFolder.add(this.state, "deleteLastGeoOfType", ["Any", "Plane", "Cube", "Sphere", "Torus"]).listen().name("Geo type to remove")
@@ -531,23 +542,27 @@ export class App extends Application {
       modelFolder.addColor(proceduralModelsList[geoIndex], "baseColor").name("Base color").listen()
 
       const geoTextureFolderTmp = modelFolder.addFolder("Texture")
+      geoTextureFolderTmp.add(this, "userGeoTextureSpecificFile").name("File on computer") //.onChange(this.userGeoTextureSpecificFile.bind(this))
       geoTextureFolderTmp.add(proceduralModelsList[geoIndex].texturing, "texture").name("Texture image").onChange((value) => this.updateGeoModelTexture(geoIndex, { "texture": value }))
       const updateTextureMappingsUI = () => {
         if (proceduralModelsList[geoIndex].texturing.textureMappings.mapping === "UV") {
-          geoTextureFolderTmp.__controllers[2].__li.style.display = "none"
           geoTextureFolderTmp.__controllers[3].__li.style.display = "none"
           geoTextureFolderTmp.__controllers[4].__li.style.display = "none"
           geoTextureFolderTmp.__controllers[5].__li.style.display = "none"
           geoTextureFolderTmp.__controllers[6].__li.style.display = "none"
+          geoTextureFolderTmp.__controllers[7].__li.style.display = "none"
+          geoTextureFolderTmp.__controllers[8].__li.style.display = "none"
         } else {
-          geoTextureFolderTmp.__controllers[2].__li.style.display = ""
           geoTextureFolderTmp.__controllers[3].__li.style.display = ""
           geoTextureFolderTmp.__controllers[4].__li.style.display = ""
           geoTextureFolderTmp.__controllers[5].__li.style.display = ""
           geoTextureFolderTmp.__controllers[6].__li.style.display = ""
+          geoTextureFolderTmp.__controllers[7].__li.style.display = ""
+          geoTextureFolderTmp.__controllers[8].__li.style.display = ""
         }
       }
       geoTextureFolderTmp.add(proceduralModelsList[geoIndex].texturing.textureMappings, "mapping", ["UV", "Planar", "Cylindrical", "Spherical"]).listen().onChange(() => updateTextureMappingsUI())
+      geoTextureFolderTmp.add(proceduralModelsList[geoIndex].texturing.textureMappings, "projectionDirection", projectionDirections).onChange((value) => this.updateGeoModelTextureMapping(geoIndex, { "projectionDirection": projectionDirections[value] }))
       geoTextureFolderTmp.add(proceduralModelsList[geoIndex].texturing.textureMappings, "translateX", -1, 1, 0.1).onChange((value) => this.updateGeoModelTextureMapping(geoIndex, { "translateX": value }))
       geoTextureFolderTmp.add(proceduralModelsList[geoIndex].texturing.textureMappings, "translateY", -1, 1, 0.1).onChange((value) => this.updateGeoModelTextureMapping(geoIndex, { "translateY": value }))
       geoTextureFolderTmp.add(proceduralModelsList[geoIndex].texturing.textureMappings, "rotate", 0, Math.PI * 2, 0.01).onChange((value) => this.updateGeoModelTextureMapping(geoIndex, { "rotate": value }))
@@ -579,6 +594,51 @@ export class App extends Application {
 
   toggleLogs() {
     this.logs.classList.toggle("hidden")
+  }
+
+  /* File chooser functions */
+  async userGltfFile() {
+    this.fileChooser.openFileDialog()
+    await this.fileChooser.selectFile().then((fileData) => {
+      this.state.selectedModel = fileData.file.name
+      model = fileData.data
+      this.loadSceneAndCamera(fileData.type)
+    }).catch((error) => {
+      console.error('Error loading file:', error)
+    })
+
+  }
+
+  async userGltfTextureFile() {
+    this.fileChooser.openFileDialog()
+    await this.fileChooser.selectFile().then((fileData) => {
+      this.renderer.updateBaseColorTexture(fileData)
+    }).catch((error) => {
+      console.error('Error loading file:', error)
+    })
+  }
+
+  async userGeoTextureFile() {
+    this.fileChooser.openFileDialog()
+    await this.fileChooser.selectFile().then((fileData) => {
+      this.state.newGeoObject.texture = fileData.file.name
+      this.state.newGeoObject.textureBlob = fileData.data
+    }).catch((error) => {
+      console.error('Error loading file:', error)
+    })
+  }
+
+  async userGeoTextureSpecificFile() {
+    this.fileChooser.openFileDialog()
+    await this.fileChooser.selectFile().then((fileData) => {
+      for (let geo of proceduralModelsList) {
+        geo.texturing.texture = fileData.file.name
+        geo.texturing.textureBlob = fileData.data
+        Geo.updateGeoTexture(this.gl, geo)
+      }
+    }).catch((error) => {
+      console.error('Error loading file:', error)
+    })
   }
 
 
@@ -757,10 +817,12 @@ export class App extends Application {
     options.material.specularColor = this.state.newGeoObject.shadingModel.specularColor
     options.material.shininess = this.state.newGeoObject.shadingModel.shadingShininess
     options.texture = this.state.newGeoObject.texture
-    options.textureMappingOptions = this.state.newGeoObject.textureMapping
+    options.textureBlob = this.state.newGeoObject.textureBlob
+    options.textureMappings = this.state.newGeoObject.textureMapping
 
     proceduralModelsList.push(await Geo.createPlane(this.gl, this.renderer.programs.geo, options))
     this.updateGUIgeoList()
+    this.state.newGeoObject.textureBlob = undefined
   }
 
   async addGeoCube() {
@@ -775,10 +837,12 @@ export class App extends Application {
     options.material.specularColor = this.state.newGeoObject.shadingModel.specularColor
     options.material.shininess = this.state.newGeoObject.shadingModel.shadingShininess
     options.texture = this.state.newGeoObject.texture
-    options.textureMappingOptions = this.state.newGeoObject.textureMapping
+    options.textureBlob = this.state.newGeoObject.textureBlob
+    options.textureMappings = this.state.newGeoObject.textureMapping
 
     proceduralModelsList.push(await Geo.createCube(this.gl, this.renderer.programs.geo, options))
     this.updateGUIgeoList()
+    this.state.newGeoObject.textureBlob = undefined
   }
 
   async addGeoSphere() {
@@ -793,12 +857,14 @@ export class App extends Application {
     options.material.specularColor = this.state.newGeoObject.shadingModel.specularColor
     options.material.shininess = this.state.newGeoObject.shadingModel.shadingShininess
     options.texture = this.state.newGeoObject.texture
-    options.textureMappingOptions = this.state.newGeoObject.textureMapping
+    options.textureBlob = this.state.newGeoObject.textureBlob
+    options.textureMappings = this.state.newGeoObject.textureMapping
     options.latBands = this.state.newGeoObject.lat
     options.lonBands = this.state.newGeoObject.lon
 
     proceduralModelsList.push(await Geo.createSphere(this.gl, this.renderer.programs.geo, options))
     this.updateGUIgeoList()
+    this.state.newGeoObject.textureBlob = undefined
   }
 
   async addGeoTorus() {
@@ -813,13 +879,15 @@ export class App extends Application {
     options.material.specularColor = this.state.newGeoObject.shadingModel.specularColor
     options.material.shininess = this.state.newGeoObject.shadingModel.shadingShininess
     options.texture = this.state.newGeoObject.texture
-    options.textureMappingOptions = this.state.newGeoObject.textureMapping
+    options.textureBlob = this.state.newGeoObject.textureBlob
+    options.textureMappings = this.state.newGeoObject.textureMapping
     options.radialSegments = this.state.newGeoObject.lat
     options.tubularSegments = this.state.newGeoObject.lon
     options.holeRadius = this.state.newGeoObject.innerHole
 
     proceduralModelsList.push(await Geo.createTorus(this.gl, this.renderer.programs.geo, options))
     this.updateGUIgeoList()
+    this.state.newGeoObject.textureBlob = undefined
   }
 
   async updateGeoModelBuffers(geoIndex, newValue) {
@@ -880,11 +948,18 @@ export class App extends Application {
       this.scene.globalSampler = undefined
     }
   }
+
   mappingChanged(val) {
     switch (val) {
       case "Planar":
+        this.state.newGeoObject.textureMapping.projectionDirection = [0, 0, 1]
+        for (let mappingTransform of this.geometryActions[2]) {
+          mappingTransform.__li.style.display = ""
+        }
+        break
       case "Cylindrical":
       case "Spherical":
+        this.state.newGeoObject.textureMapping.projectionDirection = [0, 1, 0]
         for (let mappingTransform of this.geometryActions[2]) {
           mappingTransform.__li.style.display = ""
         }
@@ -1025,9 +1100,9 @@ export class App extends Application {
   }
   //****************************************************************************************************************
 
-  async loadSceneAndCamera() {
+  async loadSceneAndCamera(type = undefined) {
     if (this.state.selectedModel != "") {
-      await this.loader.load(model)
+      (type ? await this.loader.load(model, type) : await this.loader.load(model))
       this.extractPosIndBB(this.loader.defaultScene)
       this.state.selectedScene = this.loader.defaultScene
       await this.loadScenes()

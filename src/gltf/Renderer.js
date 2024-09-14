@@ -62,6 +62,17 @@ export class Renderer {
     this.gl.clearColor(color[0] * fraction, color[1] * fraction, color[2] * fraction, 1)
   }
 
+  async updateBaseColorTexture(userData) {
+    const image = userData.data
+    this.globalBaseColorTexture = WebGL.createTexture(this.gl, { image })
+    /*for (let o of this.glObjects.keys()) {
+      if (o.constructor.name === "Primitive" && o.material) {
+        const image = userData.data
+        o.material.baseColorTexture = WebGL.createTexture(this.gl, { image })
+      }
+    }*/
+  }
+
   setWrappingModeS(mode) {
     //this.gl.activeTexture(this.gl.TEXTURE0)
     for (let o of this.glObjects.values()) {
@@ -303,6 +314,7 @@ export class Renderer {
   }
 
   prepareScene(scene) {
+    this.globalBaseColorTexture = undefined
     for (const node of scene.nodes) {
       this.prepareNode(node)
     }
@@ -553,7 +565,7 @@ export class Renderer {
     // Binding textures
     if (material.baseColorTexture !== null) {
       texture = material.baseColorTexture
-      glTexture = this.glObjects.get(texture.image)
+      glTexture = this.globalBaseColorTexture ? this.globalBaseColorTexture : this.glObjects.get(texture.image)
       glSampler = globalSampler ? globalSampler : this.glObjects.get(texture.sampler)
 
       gl.activeTexture(gl.TEXTURE0)

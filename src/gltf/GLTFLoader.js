@@ -62,21 +62,33 @@ export class GLTFLoader {
     }
   }
 
-  async load(url) {
-    const extension = url.split('.').pop().toLowerCase()
-    this.gltfUrl = new URL(url, window.location)
+  async load(url, type = undefined) {
+    let buffer = undefined
+    let extension = type
+    if (!extension) {
+      extension = url.split('.').pop().toLowerCase()
+      this.gltfUrl = new URL(url, window.location)
+    } else {
+      this.gltfUrl = window.location
+      buffer = url
+    }
+
     if (extension === 'glb') {
-      await this.loadGLB(url)
+      await this.loadGLB(url, buffer)
     } else if (extension === 'gltf') {
-      await this.loadGLTF(url)
+      await this.loadGLTF(url, buffer)
     } else {
       console.error('Unsupported file format')
     }
   }
 
-  async loadGLTF(url) {
+  async loadGLTF(url, json) {
     try {
-      this.gltf = await this.fetchJson(url)
+      if (json) {
+        this.gltf = JSON.parse(json)
+      } else {
+        this.gltf = await this.fetchJson(url)
+      }
       this.defaultScene = this.gltf.scene || 0
       this.glbBuffers = null
     } catch (error) {
@@ -84,9 +96,14 @@ export class GLTFLoader {
     }
   }
 
-  async loadGLB(url) {
+  async loadGLB(url, buffer) {
     try {
-      const data = await this.fetchBuffer(url)
+      let data
+      if (buffer) {
+        data = buffer
+      } else {
+        data = await this.fetchBuffer(url)
+      }
       this.gltf = await this.parseGLB(data)
       this.defaultScene = this.gltf.scene || 0
     } catch (error) {

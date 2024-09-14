@@ -4,7 +4,8 @@ document.addEventListener("DOMContentLoaded", async () => {
   const canvas = document.querySelector("#mainCanvas")
   const app = new App(canvas)
   const logs = document.querySelector(".Logs")
-  await app.init(logs)
+  const fileChooser = document.querySelector("#localFileChooser")
+  await app.init(logs, fileChooser)
   let forAllCameras = true
 
   // Listeners
