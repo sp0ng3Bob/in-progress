@@ -2,73 +2,96 @@ import glMatrix from "glMatrix"
 
 const vec3 = glMatrix.vec3
 const mat4 = glMatrix.mat4
+const quat = glMatrix.quat
 
 /* Texture (UV) mapping */
-function calculatePlanarMapping(vertices, projectionDirection = "Z") {
+function calculatePlanarMapping(vertices, projectionDirection = [0, 0, 1]) {
   const uvs = []
+
+  // Step 1: Normalize the projection direction
+  const projDir = vec3.normalize(vec3.create(), projectionDirection)
+  const alignDirection = vec3.fromValues(0, 1, 0) // Y-axis for planar projection
+
+  // Step 2: Calculate the quaternion that rotates projDir to alignDirection
+  const rotationQuat = quat.create()
+  quat.rotationTo(rotationQuat, projDir, alignDirection)
+
+  // Step 3: Convert quaternion to a rotation matrix
+  const rotationMatrix = mat4.fromQuat(mat4.create(), rotationQuat)
+
   for (let i = 0; i < vertices.length; i += 3) {
-    let u, v
+    const vertex = vec3.fromValues(vertices[i], vertices[i + 1], vertices[i + 2])
 
-    if (projectionDirection === "X") {
-      u = vertices[i + 1] * 0.5 + 0.5 // Y
-      v = vertices[i + 2] * 0.5 + 0.5 // Z
-    } else if (projectionDirection === "Y") {
-      u = vertices[i] * 0.5 + 0.5     // X
-      v = vertices[i + 2] * 0.5 + 0.5 // Z
-    } else {  // Default: Z projection
-      u = vertices[i] * 0.5 + 0.5     // X
-      v = vertices[i + 1] * 0.5 + 0.5 // Y
-    }
+    // Step 4: Transform the vertex to align with the projection direction
+    vec3.transformMat4(vertex, vertex, rotationMatrix)
 
-    uvs.push(u, v)
+    // Step 5: Use x and z for UV mapping
+    uvs.push(vertex[0] * 0.5 + 0.5, vertex[2] * 0.5 + 0.5)
   }
+
   return new Float32Array(uvs)
 }
 
-function calculateCylindricalMapping(vertices, projectionDirection = "Y") {
+function calculateCylindricalMapping(vertices, projectionDirection = [0, 0, 1]) {
   const uvs = []
-  for (let i = 0; i < vertices.length; i += 3) {
-    let theta, v
 
-    if (projectionDirection === "X") {
-      theta = Math.atan2(vertices[i + 2], vertices[i + 1])  // Z and Y
-      v = vertices[i] * 0.5 + 0.5                           // X
-    } else if (projectionDirection === "Z") {
-      theta = Math.atan2(vertices[i + 1], vertices[i])  // Y and X
-      v = vertices[i + 2] * 0.5 + 0.5                   // Z
-    } else {  // Default: Y projection
-      theta = Math.atan2(vertices[i + 2], vertices[i])  // Z and X
-      v = vertices[i + 1] * 0.5 + 0.5                   // Y
-    }
+  // Step 1: Normalize the projection direction
+  const projDir = vec3.normalize(vec3.create(), projectionDirection)
+  const alignDirection = vec3.fromValues(0, 1, 0) // Y-axis for cylindrical projection
+
+  // Step 2: Calculate the quaternion that rotates projDir to alignDirection
+  const rotationQuat = quat.create()
+  quat.rotationTo(rotationQuat, projDir, alignDirection)
+
+  // Step 3: Convert quaternion to a rotation matrix
+  const rotationMatrix = mat4.fromQuat(mat4.create(), rotationQuat)
+
+  for (let i = 0; i < vertices.length; i += 3) {
+    const vertex = vec3.fromValues(vertices[i], vertices[i + 1], vertices[i + 2])
+
+    // Step 4: Transform the vertex to align with the projection direction
+    vec3.transformMat4(vertex, vertex, rotationMatrix)
+
+    // Step 5: Compute theta (angle) and v for cylindrical mapping
+    const theta = Math.atan2(vertex[2], vertex[0])
+    const v = vertex[1] * 0.5 + 0.5 // Y axis
 
     uvs.push((theta + Math.PI) / (2 * Math.PI), v)
   }
+
   return new Float32Array(uvs)
 }
 
-function calculateSphericalMapping(vertices, projectionDirection = "Y") {
+function calculateSphericalMapping(vertices, projectionDirection = [0, 0, 1]) {
   const uvs = []
-  for (let i = 0; i < vertices.length; i += 3) {
-    const length = Math.sqrt(vertices[i] ** 2 + vertices[i + 1] ** 2 + vertices[i + 2] ** 2)
-    let theta, phi
 
-    if (projectionDirection === "X") {
-      theta = Math.atan2(vertices[i + 2], vertices[i + 1])  // Z and Y
-      phi = Math.acos(vertices[i] / length)                 // X
-    } else if (projectionDirection === "Z") {
-      theta = Math.atan2(vertices[i + 1], vertices[i])  // Y and X
-      phi = Math.acos(vertices[i + 2] / length)         // Z
-    } else {  // Default: Y projection
-      theta = Math.atan2(vertices[i + 2], vertices[i])  // Z and X
-      phi = Math.acos(vertices[i + 1] / length)         // Y
-    }
+  // Step 1: Normalize the projection direction
+  const projDir = vec3.normalize(vec3.create(), projectionDirection)
+  const alignDirection = vec3.fromValues(0, 1, 0) // Y-axis for spherical projection
+
+  // Step 2: Calculate the quaternion that rotates projDir to alignDirection
+  const rotationQuat = quat.create()
+  quat.rotationTo(rotationQuat, projDir, alignDirection)
+
+  // Step 3: Convert quaternion to a rotation matrix
+  const rotationMatrix = mat4.fromQuat(mat4.create(), rotationQuat)
+
+  for (let i = 0; i < vertices.length; i += 3) {
+    const vertex = vec3.fromValues(vertices[i], vertices[i + 1], vertices[i + 2])
+
+    // Step 4: Transform the vertex to align with the projection direction
+    vec3.transformMat4(vertex, vertex, rotationMatrix)
+
+    // Step 5: Compute spherical coordinates
+    const length = vec3.length(vertex)
+    const theta = Math.atan2(vertex[2], vertex[0]) // X and Z
+    const phi = Math.acos(vertex[1] / length) // Y
 
     uvs.push((theta + Math.PI) / (2 * Math.PI), phi / Math.PI)
   }
+
   return new Float32Array(uvs)
 }
-
-
 
 /* Texture transformation */
 function translateUVs(uvs, tx, ty) {
@@ -148,14 +171,14 @@ export function setUVBuffer(gl, model, newUVs) {
 export function updateMapping(bufferData, options) {
   if (!options?.mapping) { return }
 
-  if ("Planar") {
+  if (options.mapping === "Planar") {
     bufferData.uvs = updateUVs(calculatePlanarMapping(bufferData.positions, options.projectionDirection), options)
-  } else if ("Cylindrical") {
+  } else if (options.mapping === "Cylindrical") {
     bufferData.uvs = updateUVs(calculateCylindricalMapping(bufferData.positions, options.projectionDirection), options) //options.projectionDirection
-  } else if ("Spherical") {
+  } else if (options.mapping === "Spherical") {
     bufferData.uvs = updateUVs(calculateSphericalMapping(bufferData.positions, options.projectionDirection), options)
   } else {
-    bufferData.uvs = updateUVs(bufferData.uvs, options)
+    bufferData.uvs = updateUVs(bufferData.defaultUVs, options)
   }
 }
 

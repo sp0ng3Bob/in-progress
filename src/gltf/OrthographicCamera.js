@@ -26,6 +26,7 @@ export class OrthographicCamera extends Camera {
       this.left, this.right,
       this.bottom, this.top,
       this.near, this.far)*/
+      
     /*
       r be half the orthographic width, set by camera.orthographic.xmag
       t be half the orthographic height, set by camera.orthographic.ymag

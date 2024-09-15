@@ -322,6 +322,7 @@ async function setUpTexture(gl, textureImage, textureImageBlob) {
 
 export async function createPlane(gl, program, options) {
   const bufferData = createPlaneGeometry(options.size, options.position, options.rotation)
+  bufferData.defaultUVs = bufferData.uvs.slice(0)
   updateMapping(bufferData, options.textureMappings)
   const outModel = await prepareBuffers(gl, program, bufferData, options.material.color, options.texture, options.textureBlob)
   outModel.type = "Plane"
@@ -346,6 +347,7 @@ export async function createPlane(gl, program, options) {
 
 export async function createCube(gl, program, options) {
   const bufferData = createCubeGeometry(options.size, options.position, options.rotation)
+  bufferData.defaultUVs = bufferData.uvs.slice(0)
   updateMapping(bufferData, options.textureMappings)
   const outModel = await prepareBuffers(gl, program, bufferData, options.material.color, options.texture, options.textureBlob)
   outModel.type = "Cube"
@@ -370,6 +372,7 @@ export async function createCube(gl, program, options) {
 
 export async function createSphere(gl, program, options) {
   const bufferData = createSphereGeometry(options.radius, options.position, options.rotation, options.latBands, options.lonBands)
+  bufferData.defaultUVs = bufferData.uvs.slice(0)
   updateMapping(bufferData, options.textureMappings)
   const outModel = await prepareBuffers(gl, program, bufferData, options.material.color, options.texture, options.textureBlob)
   outModel.type = "Sphere"
@@ -396,6 +399,7 @@ export async function createSphere(gl, program, options) {
 
 export async function createTorus(gl, program, options) {
   const bufferData = createTorusGeometry(options.radius, options.holeRadius, options.position, options.rotation, options.radialSegments, options.tubularSegments)
+  bufferData.defaultUVs = bufferData.uvs.slice(0)
   updateMapping(bufferData, options.textureMappings)
   const outModel = await prepareBuffers(gl, program, bufferData, options.material.color, options.texture, options.textureBlob)
   outModel.type = "Torus"

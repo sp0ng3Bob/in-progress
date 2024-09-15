@@ -10,7 +10,7 @@ export class PerspectiveCamera extends Camera {
     super(options)
 
     this.aspect = options.aspect ?? 1.618
-    this.fov = options.fov ?? (45 * Math.PI / 180)
+    this.fov = options.fov ?? (Math.PI / 3)
     this.near = options.near ?? 0.01
     this.far = options.far ?? Infinity
 
@@ -32,7 +32,7 @@ export class PerspectiveCamera extends Camera {
     */
     /*const perspective = mat4.create()
     const a = this.aspect
-    const y = this.fov //2 * Math.atan(Math.tan(this.fov / 2) / a) // yFov ..???
+    const y = this.fov
     const n = this.near
 
     perspective[0] = 1 / (a * Math.tan(0.5 * y))
