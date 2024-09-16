@@ -273,12 +273,12 @@ void main() {
 */
   /*-----------*/
 
-  vec3 diffuse = vec3(0.0);
+  /*vec3 diffuse = vec3(0.0);
   for (int i = 0; i < uNumberOfLights; i++) {
     vec3 lightDir = normalize(uLightPositions[i] - vFragPosition);
     float lambertian = max(dot(normal, lightDir), 0.0);
     diffuse += uLightColors[i] * lambertian; // * uAmbientalColor;
-  }
+  }*/
 
   vec3 finalColor = color.rgb; //* diffuse;
 
@@ -297,7 +297,7 @@ void main() {
   }
 
   // Final output color
-  oColor = vec4(mix(finalColor, uAmbientalColor, 0.1), color.a); //finalColor * occlusion + emissive
+  oColor = vec4(mix(finalColor, uAmbientalColor, 0.1), color.a);
 }`
 
 const geoVertex = `#version 300 es
@@ -354,47 +354,63 @@ in vec3 vNormal;
 out vec4 oColor;
 
 void main() {
-    vec3 albedo = uBaseColor.rgb;
-    
-    if (uHasBaseColorTexture == 1) {
-      albedo *= texture(uTexture, vTexCoord).rgb;
+  vec3 albedo = uBaseColor.rgb;
+
+  if (uHasBaseColorTexture == 1) {
+    albedo *= texture(uTexture, vTexCoord).rgb;
+  }
+
+  vec3 normal = normalize(vNormal);
+  vec3 viewDir = normalize(uCameraPosition - vFragPosition);
+
+  vec3 finalColor = vec3(0.0);
+
+  for (int i = 0; i < uNumberOfLights; i++) {
+    vec3 lightPosition = uLightPositions[i];
+    vec3 lightColor = uLightColors[i];
+    float intensity = uLightIntensities[i];
+    float constant = uAttenuationConstant[i];
+    float linear = uAttenuationLinear[i];
+    float quadratic = uAttenuationQuadratic[i];
+
+    vec3 L = lightPosition - vFragPosition;
+    vec3 lightDir = normalize(L);
+    float distance = length(L);
+
+    // Adjusted Attenuation calculation
+    float attenuation = 1.0 / (constant + linear * distance + quadratic * (distance * distance));
+
+    // Lambertian Diffuse
+    float diff = max(dot(normal, lightDir), 0.0);
+    vec3 diffuse = lightColor * uBaseColor.rgb * diff * intensity * attenuation;
+
+    // Phong Specular (only if using Phong shading)
+    vec3 specular = vec3(0.0);
+    /*if (uShadingModel == 1) {
+      //vec3 reflectDir = max(dot(lightDir, normal), 0.0); //reflect(lightDir, normal);
+      vec3 R = 2.0 * max(dot(lightDir, normal), 0.0) * normal - lightDir;
+      float spec = pow(max(dot(R, viewDir), 0.0), uShininess);
+      specular = uSpecularColor * lightColor * uBaseColor.rgb * spec * intensity * attenuation;
+    }*/
+
+    if (uShadingModel == 1) {  // Blinn-Phong shading
+      vec3 halfDir = normalize(lightDir + viewDir);
+      float spec = pow(max(dot(halfDir, normal), 0.0), uShininess);
+      specular = uSpecularColor * lightColor * uBaseColor.rgb * spec * intensity;
     }
 
-    vec3 normal = normalize(vNormal);
-    vec3 viewDir = normalize(uCameraPosition - vFragPosition);
-    
-    vec3 finalColor = vec3(0.0);
+    // Apply diffuse, specular, and attenuation
+    //vec3 finalLightColor = lightColor / pow(distance, 2.0);
+    finalColor += (lightColor / pow(distance, 2.0)) + (diffuse + specular);
+    //finalColor += lightColor * vec3(clamp(distance * 0.1, 0.0, 1.0));
+    //oColor = vec4(lightColor, 1.0);
+  }
 
-    for (int i = 0; i < uNumberOfLights; i++) {
-        // Light calculations
-        vec3 L = uLightPositions[i] - vFragPosition;
-        vec3 lightDir = normalize(L);
-        float distance = length(L);
+  // Clamp the final color to prevent over-brightness
+  finalColor = clamp(finalColor, 0.0, 1.0);
 
-        // Attenuation calculation
-        float attenuation = (uAttenuationConstant[i] + uAttenuationLinear[i] * distance + uAttenuationQuadratic[i] * (distance * distance)); //1.0 / (uAttenuationConstant[i] + uAttenuationLinear[i] * distance + uAttenuationQuadratic[i] * (distance * distance));
-
-        // Lambertian Diffuse
-        float diff = max(dot(normal, lightDir), 0.0);
-        vec3 diffuse = diff * uLightColors[i] * albedo * uLightIntensities[i]; // * 0.5;  // Scale down
-
-        // Phong Specular (only if using Phong shading)
-        vec3 specular = vec3(0.0);
-        if (uShadingModel == 1) {
-            vec3 reflectDir = reflect(-lightDir, normal);
-            float spec = pow(max(dot(viewDir, reflectDir), 0.0), uShininess);
-            specular = spec * uSpecularColor * uLightColors[i] * uLightIntensities[i]; // * 0.5; // Scale down
-        }
-
-        // Apply ambient lighting and attenuation
-        //vec3 ambient = uAmbientalColor * albedo * 0.3;
-        finalColor += (diffuse + specular) * attenuation; //(ambient + diffuse + specular) * attenuation;
-    }
-
-    // Clamp the final color to prevent over-brightness
-    finalColor = clamp(finalColor, 0.0, 1.0);
-    
-    oColor = vec4(mix(finalColor, uAmbientalColor, 0.1), uBaseColor.a); //vec4(pow(finalColor, vec3(1.0 / 2.2)), uBaseColor.a);
+  finalColor += albedo;
+  oColor = vec4(finalColor, uBaseColor.a);
 }`
 
 const axesVertex = `#version 300 es

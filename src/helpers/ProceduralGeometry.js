@@ -285,9 +285,8 @@ async function setUpTexture(gl, textureImage, textureImageBlob) {
   if (textureImage != "") {
     try {
       if (textureImageBlob) {
-        const image = textureImageBlob
         const texture = WebGL.createTexture(gl, {
-          image,
+          image: textureImageBlob,
           mip: true,
           wrapS: gl.REPEAT,
           wrapT: gl.REPEAT,

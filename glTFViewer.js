@@ -116,8 +116,8 @@ export class App extends Application {
       newLightObject: {
         addLightColor: [255, 255, 180],
         addLightPosition: "0, 5, 0",
-        addLightIntensity: 1,
-        addLightAttenuationConstantFactor: 1,
+        addLightIntensity: 1.0,
+        addLightAttenuationConstantFactor: 1.0,
         addLightAttenuationLinearFactor: 0.09,
         addLightAttenuationQuadraticFactor: 0.032,
       },
@@ -212,12 +212,17 @@ export class App extends Application {
     // Lights
     this.lightsNumberLimit = 8
 
-    this.addPointLight("-1, 1, 0", [255, 120, 120])
-    this.addPointLight("-1, -1, 0", [100, 255, 100])
-    this.addPointLight("1, 1, 0", [127, 127, 255])
-    this.addPointLight("1, -1, 0", [200, 120, 200])
-    this.addPointLight("0, 1, 1", [255, 120, 120])
-    this.addPointLight("0, -1, 1", [100, 255, 100])
+    this.addPointLight("5,2,0", [255, 120, 120])
+    this.addPointLight("2.5,2,4.3301", [100, 255, 100])
+    this.addPointLight("−2.5,2,4.3301", [127, 127, 255])
+    this.addPointLight("−5,2,0", [200, 120, 200])
+    this.addPointLight("−2.5,2,−4.3301", [255, 120, 120])
+    this.addPointLight("2.5,2,−4.3301", [100, 255, 100])
+
+    //debuging lights
+    this.state.newGeoObject.size = 6
+    this.state.newGeoObject.position = "0,0,0"
+    this.addGeoPlane()
 
     //this.initGUI()
     //**/!* /!*!/ * !/*!/*!/*!/!*/!* /!*/! * /!*/! * /!*!/ * !/**!/!*/!*/*!/*!/*!*!/*!/*!/*!/*!/*/ !* /!*/! * /!************?**?*??
@@ -316,7 +321,7 @@ export class App extends Application {
     const addPointLightAction = this.addLightFolder.add(this, "addPointLight").name("ADD POINT LIGHT")
     this.addLightFolder.add(this.state.newLightObject, "addLightPosition").name("Light position") // position,
     this.addLightFolder.addColor(this.state.newLightObject, "addLightColor").name("Light color") // color,
-    this.addLightFolder.add(this.state.newLightObject, "addLightIntensity", 0, 10).name("Light intensity") // intensity
+    this.addLightFolder.add(this.state.newLightObject, "addLightIntensity", 0, 10, 0.1).name("Light intensity") // intensity
     this.addLightFolder.add(this.state.newLightObject, "addLightAttenuationConstantFactor", 0, 2, 0.1).name("Constant atten.") // attenuation (constant, linear, quadratic attenuation)
     this.addLightFolder.add(this.state.newLightObject, "addLightAttenuationLinearFactor", 0, 1, 0.01).name("Linear atten.") // attenuation (constant, linear, quadratic attenuation)
     this.addLightFolder.add(this.state.newLightObject, "addLightAttenuationQuadraticFactor", 0, 1, 0.001).name("Quadratic atten.") // attenuation (constant, linear, quadratic attenuation)
@@ -645,34 +650,37 @@ export class App extends Application {
 
 
   /* LIGHTS */
-  async addPointLight(position, color, constant, linear, quadratic) {
-    const options = {
-      position: position || this.state.newLightObject.addLightPosition,
-      color: color || this.state.newLightObject.addLightColor,
-      constant: constant || this.state.newLightObject.addLightAttenuationConstantFactor,
-      linear: linear || this.state.newLightObject.addLightAttenuationLinearFactor,
-      quadratic: quadratic || this.state.newLightObject.addLightAttenuationQuadraticFactor
-    }
-
-    const sphereOptions = {
-      radius: 0.01,
-      position: getPositionNormalised(options.position),
-      rotation: [0, 0, 0, 1],
-      latBands: 18,
-      lonBands: 18,
-      texture: "",
-      material: {
-        color: options.color,
-        type: "Lambert",
-        diffuseColor: options.color,
-        specularColor: undefined,
-        shininess: undefined
+  async addPointLight(position = undefined, color = undefined, intensity = undefined, constant = undefined, linear = undefined, quadratic = undefined) {
+    if (this.state.lightsList.length < this.lightsNumberLimit) {
+      const options = {
+        position: position || this.state.newLightObject.addLightPosition,
+        color: color || this.state.newLightObject.addLightColor,
+        intensity: intensity || this.state.newLightObject.addLightIntensity,
+        constant: constant || this.state.newLightObject.addLightAttenuationConstantFactor,
+        linear: linear || this.state.newLightObject.addLightAttenuationLinearFactor,
+        quadratic: quadratic || this.state.newLightObject.addLightAttenuationQuadraticFactor
       }
-    }
 
-    this.state.lightsList.push(new PointLight(options))
-    globalLightsList.push(await Geo.createSphere(this.gl, this.renderer.programs.gltf, sphereOptions))
-    this.updateGUIlightsList()
+      const sphereOptions = {
+        radius: 0.01,
+        position: getPositionNormalised(options.position),
+        rotation: [0, 0, 0, 1],
+        latBands: 18,
+        lonBands: 18,
+        texture: "",
+        material: {
+          color: options.color,
+          type: "Lambert",
+          diffuseColor: options.color,
+          specularColor: undefined,
+          shininess: undefined
+        }
+      }
+
+      this.state.lightsList.push(new PointLight(options))
+      globalLightsList.push(await Geo.createSphere(this.gl, this.renderer.programs.gltf, sphereOptions))
+      this.updateGUIlightsList()
+    }
   }
 
   toggleShadingModel() {

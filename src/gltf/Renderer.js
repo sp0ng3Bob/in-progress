@@ -323,7 +323,56 @@ export class Renderer {
   prepareLights(lights) {
     const gl = this.gl
 
-    for (let program of [this.programs.gltf, this.programs.geo]) {
+    const lightPositions = []
+    const lightColors = []
+    const lightIntensities = []
+    const lightConstants = []
+    const lightLinears = []
+    const lightQuadratics = []
+
+    for (let l in lights.lights) {
+      lightPositions.push(...lights.lights[l].getPositionNormalised())
+      lightColors.push(...lights.lights[l].getColorNormalised())
+      lightIntensities.push(lights.lights[l].intensity)
+      lightConstants.push(lights.lights[l].constantAttenuation)
+      lightLinears.push(lights.lights[l].linearAttenuation)
+      lightQuadratics.push(lights.lights[l].quadraticAttenuation)
+    }
+
+    gl.useProgram(this.programs.gltf.program)
+    gl.uniform3fv(this.programs.gltf.uniforms.uAmbientalColor, getNormalisedRGB(lights.ambientalColor))
+
+    for (let program of [this.programs.geo]) {
+      gl.useProgram(program.program)
+      gl.uniform3fv(program.uniforms.uAmbientalColor, getNormalisedRGB(lights.ambientalColor))
+      gl.uniform1i(program.uniforms.uNumberOfLights, Object.keys(lights.lights).length)
+      gl.uniform3fv(
+        gl.getUniformLocation(program.program, "uLightPositions"),
+        new Float32Array(lightPositions)
+      )
+      gl.uniform3fv(
+        gl.getUniformLocation(program.program, "uLightColors"),
+        new Float32Array(lightColors)
+      )
+      gl.uniform1f(
+        gl.getUniformLocation(program.program, "uLightIntensities"),
+        new Float32Array(lightIntensities)
+      )
+      gl.uniform1f(
+        gl.getUniformLocation(program.program, "uAttenuationConstant"),
+        new Float32Array(lightConstants)
+      )
+      gl.uniform1f(
+        gl.getUniformLocation(program.program, "uAttenuationLinear"),
+        new Float32Array(lightLinears)
+      )
+      gl.uniform1f(
+        gl.getUniformLocation(program.program, "uAttenuationQuadratic"),
+        new Float32Array(lightQuadratics)
+      )
+    }
+
+    /*for (let program of [this.programs.gltf, this.programs.geo]) {
       gl.useProgram(program.program)
       gl.uniform3fv(program.uniforms.uAmbientalColor, getNormalisedRGB(lights.ambientalColor))
       gl.uniform1i(program.uniforms.uNumberOfLights, Object.keys(lights.lights).length)
@@ -335,7 +384,7 @@ export class Renderer {
         gl.uniform1f(program.uniforms[`uAttenuationLinear[${l}]`], lights.lights[l].linearAttenuation)
         gl.uniform1f(program.uniforms[`uAttenuationQuadratic[${l}]`], lights.lights[l].quadraticAttenuation)
       }
-    }
+    }*/
   }
 
   getViewProjectionMatrix(camera) {
@@ -405,6 +454,8 @@ export class Renderer {
     gl.useProgram(program.program)
     gl.uniform3fv(program.uniforms.uCameraPosition, camera.translation)
 
+    gl.disable(gl.CULL_FACE)
+
     for (const light of scene.lights) {
       this.renderGeoNode(scene.globalSampler, light, "geo", vpMatrix)
     }
@@ -437,8 +488,8 @@ export class Renderer {
     gl.uniform4fv(program.uniforms.uBaseColor, [...getNormalisedRGB(geoBuffers.baseColor), 1])
     gl.uniform1i(program.uniforms.uShadingModel, geoBuffers.shadingModel.type === "Lambert" ? 0 : 1)
     gl.uniform3fv(program.uniforms.uDiffuseColor, geoBuffers.shadingModel.diffuseColor)
-    gl.uniform3fv(program.uniforms.uSpecularColor, geoBuffers.shadingModel.specularColor || [1, 1, 1])
-    gl.uniform1f(program.uniforms.uShininess, geoBuffers.shadingModel.shininess || 1)
+    gl.uniform3fv(program.uniforms.uSpecularColor, geoBuffers.shadingModel.specularColor || new Float32Array([1, 1, 1]))
+    gl.uniform1f(program.uniforms.uShininess, geoBuffers.shadingModel.shininess || 1.0)
 
     if (geoBuffers.texture) {
       gl.uniform1i(program.uniforms.uTexture, 0)
