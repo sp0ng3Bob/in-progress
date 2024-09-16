@@ -219,14 +219,14 @@ export class Renderer {
 
         if (name === "COLOR_0" && accessor.numComponents === 3) {
           const buffer = this.prepareBufferView(bufferView)
-          gl.bindBuffer(bufferView.target, buffer)
+          //gl.bindBuffer(bufferView.target, buffer)
 
           // Expand vec3 to vec4
           const numVertices = accessor.count
           const newBuffer = new Float32Array(numVertices * 4)
 
           // Access the original buffer's data
-          const originalBuffer = this.getBufferData(bufferView, accessor)
+          const originalBuffer = new Float32Array(bufferView.buffer, bufferView.byteOffset + accessor.byteOffset, accessor.count * accessor.numComponents)
 
           for (let i = 0; i < numVertices; i++) {
             newBuffer[i * 4] = originalBuffer[i * 3]
@@ -237,8 +237,8 @@ export class Renderer {
 
           // Create a new WebGL buffer with the expanded data
           const expandedBuffer = gl.createBuffer()
-          gl.bindBuffer(gl.ARRAY_BUFFER, expandedBuffer)
-          gl.bufferData(gl.ARRAY_BUFFER, newBuffer, gl.STATIC_DRAW)
+          gl.bindBuffer(bufferView.target, expandedBuffer)
+          gl.bufferData(bufferView.target, newBuffer, gl.STATIC_DRAW)
 
           // Set up the vertex attribute for vec4
           gl.enableVertexAttribArray(attributeIndex)
@@ -322,69 +322,47 @@ export class Renderer {
 
   prepareLights(lights) {
     const gl = this.gl
+    const MAX_LIGHTS = 8
 
-    const lightPositions = []
-    const lightColors = []
-    const lightIntensities = []
-    const lightConstants = []
-    const lightLinears = []
-    const lightQuadratics = []
+    //gl.useProgram(this.programs.gltf.program)
+    //gl.uniform3fv(this.programs.gltf.uniforms.uAmbientalColor, getNormalisedRGB(lights.ambientalColor))
+
+    // Pre-fill arrays with default values
+    const lightPositions = new Float32Array(MAX_LIGHTS * 3).fill(0)
+    const lightColors = new Float32Array(MAX_LIGHTS * 3).fill(0)
+    const lightIntensities = new Float32Array(MAX_LIGHTS).fill(0)
+    const lightConstants = new Float32Array(MAX_LIGHTS).fill(0)
+    const lightLinears = new Float32Array(MAX_LIGHTS).fill(0)
+    const lightQuadratics = new Float32Array(MAX_LIGHTS).fill(0)
 
     for (let l in lights.lights) {
-      lightPositions.push(...lights.lights[l].getPositionNormalised())
-      lightColors.push(...lights.lights[l].getColorNormalised())
-      lightIntensities.push(lights.lights[l].intensity)
-      lightConstants.push(lights.lights[l].constantAttenuation)
-      lightLinears.push(lights.lights[l].linearAttenuation)
-      lightQuadratics.push(lights.lights[l].quadraticAttenuation)
+      const lightIndex = Number(l)
+      if (lightIndex >= MAX_LIGHTS) { break }
+
+      const light = lights.lights[l]
+      const pos = light.getPositionNormalised()
+      const color = light.getColorNormalised()
+
+      lightPositions.set(pos, lightIndex * 3)
+      lightColors.set(color, lightIndex * 3)
+      lightIntensities[l] = light.intensity
+      lightConstants[l] = light.constantAttenuation
+      lightLinears[l] = light.linearAttenuation
+      lightQuadratics[l] = light.quadraticAttenuation
     }
 
-    gl.useProgram(this.programs.gltf.program)
-    gl.uniform3fv(this.programs.gltf.uniforms.uAmbientalColor, getNormalisedRGB(lights.ambientalColor))
-
-    for (let program of [this.programs.geo]) {
+    for (let program of [this.programs.gltf, this.programs.geo]) {
       gl.useProgram(program.program)
       gl.uniform3fv(program.uniforms.uAmbientalColor, getNormalisedRGB(lights.ambientalColor))
       gl.uniform1i(program.uniforms.uNumberOfLights, Object.keys(lights.lights).length)
-      gl.uniform3fv(
-        gl.getUniformLocation(program.program, "uLightPositions"),
-        new Float32Array(lightPositions)
-      )
-      gl.uniform3fv(
-        gl.getUniformLocation(program.program, "uLightColors"),
-        new Float32Array(lightColors)
-      )
-      gl.uniform1f(
-        gl.getUniformLocation(program.program, "uLightIntensities"),
-        new Float32Array(lightIntensities)
-      )
-      gl.uniform1f(
-        gl.getUniformLocation(program.program, "uAttenuationConstant"),
-        new Float32Array(lightConstants)
-      )
-      gl.uniform1f(
-        gl.getUniformLocation(program.program, "uAttenuationLinear"),
-        new Float32Array(lightLinears)
-      )
-      gl.uniform1f(
-        gl.getUniformLocation(program.program, "uAttenuationQuadratic"),
-        new Float32Array(lightQuadratics)
-      )
-    }
 
-    /*for (let program of [this.programs.gltf, this.programs.geo]) {
-      gl.useProgram(program.program)
-      gl.uniform3fv(program.uniforms.uAmbientalColor, getNormalisedRGB(lights.ambientalColor))
-      gl.uniform1i(program.uniforms.uNumberOfLights, Object.keys(lights.lights).length)
-      for (let l in lights.lights) {
-        gl.uniform3fv(program.uniforms[`uLightPositions[${l}]`], lights.lights[l].getPositionNormalised())
-        gl.uniform3fv(program.uniforms[`uLightColors[${l}]`], lights.lights[l].getColorNormalised())
-        gl.uniform1f(program.uniforms[`uLightIntensities[${l}]`], lights.lights[l].intensity)
-        gl.uniform1f(program.uniforms[`uAttenuationConstant[${l}]`], lights.lights[l].constantAttenuation)
-        gl.uniform1f(program.uniforms[`uAttenuationLinear[${l}]`], lights.lights[l].linearAttenuation)
-        gl.uniform1f(program.uniforms[`uAttenuationQuadratic[${l}]`], lights.lights[l].quadraticAttenuation)
-      }
-    }*/
+      gl.uniform3fv(gl.getUniformLocation(program.program, "uLightPositions"), lightPositions)
+      gl.uniform3fv(gl.getUniformLocation(program.program, "uLightColors"), lightColors)
+      gl.uniform1fv(gl.getUniformLocation(program.program, "uLightIntensities"), lightIntensities)
+      gl.uniform1fv(gl.getUniformLocation(program.program, "uAttenuationConstant"), lightConstants)
+      gl.uniform1fv(gl.getUniformLocation(program.program, "uAttenuationLinear"), lightLinears)
+      gl.uniform1fv(gl.getUniformLocation(program.program, "uAttenuationQuadratic"), lightQuadratics)
+    }
   }
 
   getViewProjectionMatrix(camera) {
@@ -486,7 +464,14 @@ export class Renderer {
     gl.uniformMatrix4fv(program.uniforms.uMvpMatrix, false, mvpMatrix)
     gl.uniformMatrix4fv(program.uniforms.uModelMatrix, false, mvMatrix)
     gl.uniform4fv(program.uniforms.uBaseColor, [...getNormalisedRGB(geoBuffers.baseColor), 1])
-    gl.uniform1i(program.uniforms.uShadingModel, geoBuffers.shadingModel.type === "Lambert" ? 0 : 1)
+
+    let shadingModel = 0
+    if (geoBuffers.shadingModel.type === "Phong") {
+      shadingModel = 1
+    } else if (geoBuffers.shadingModel.type === "Blinn-Phong") {
+      shadingModel = 2
+    }
+    gl.uniform1i(program.uniforms.uShadingModel, shadingModel)
     gl.uniform3fv(program.uniforms.uDiffuseColor, geoBuffers.shadingModel.diffuseColor)
     gl.uniform3fv(program.uniforms.uSpecularColor, geoBuffers.shadingModel.specularColor || new Float32Array([1, 1, 1]))
     gl.uniform1f(program.uniforms.uShininess, geoBuffers.shadingModel.shininess || 1.0)

@@ -21,15 +21,13 @@ export class PointLight {
     )
   }
   getColorNormalised() { return new Float32Array(this.color.map(u => u / 255)) }
-  getDiffuseColorNormalised() { return this.diffuseColor.map(u => u / 255) }
-  getSpecularColorNormalised() { return this.specularColor.map(u => u / 255) }
 }
 
 export function getNormalisedRGB(unsignedRGB) { return new Float32Array(unsignedRGB.map(u => u / 255)) }
 export function getUnsignedRGB(normalisedRGB) { return new Float32Array(normalisedRGB.map(n => n * 255)) }
 export function getPositionNormalised(positionString) {
   return new Float32Array(
-    positionString.split(",").map(s => Number(s.replace("−", "-")))
+    positionString.split(",").map(s => Number(s.replace("−", "-"))) //Number.parseFloat(s.replace("−", "-"))
   )
 }
 export function getPositionString(position) { return position.join(", ") }

@@ -3,12 +3,10 @@ export class FileInput {
     this.fileInput = fileInputDom
   }
 
-  // Function to trigger the file selection dialog
   openFileDialog() {
-    this.fileInput.click()  // Trigger file input dialog
+    this.fileInput.click()
   }
 
-  // Helper function to get the file extension
   getFileExtension(fileName) {
     return fileName.split(".").pop().toLowerCase()
   }
@@ -17,9 +15,9 @@ export class FileInput {
   async readFileAsText(file) {
     return new Promise((resolve, reject) => {
       const reader = new FileReader()
-      reader.onload = () => resolve(reader.result)  // Resolve with file content (text)
-      reader.onerror = () => reject(reader.error)   // Reject on error
-      reader.readAsText(file)  // Read the file as text
+      reader.onload = () => resolve(reader.result)
+      reader.onerror = () => reject(reader.error)
+      reader.readAsText(file)
     })
   }
 
@@ -27,9 +25,9 @@ export class FileInput {
   async readFileAsDataUri(file) {
     return new Promise((resolve, reject) => {
       const reader = new FileReader()
-      reader.onload = () => resolve(reader.result)  // Resolve with Data URI (base64 string)
-      reader.onerror = () => reject(reader.error)   // Reject on error
-      reader.readAsDataURL(file)  // Read the file as Data URI (base64 string)
+      reader.onload = () => resolve(reader.result)
+      reader.onerror = () => reject(reader.error)
+      reader.readAsDataURL(file)
     })
   }
 
@@ -37,30 +35,31 @@ export class FileInput {
   async readFileAsArrayBuffer(file) {
     return new Promise((resolve, reject) => {
       const reader = new FileReader()
-      reader.onload = () => resolve(reader.result)  // Resolve with ArrayBuffer
-      reader.onerror = () => reject(reader.error)   // Reject on error
-      reader.readAsArrayBuffer(file)  // Read the file as ArrayBuffer
+      reader.onload = () => resolve(reader.result)
+      reader.onerror = () => reject(reader.error)
+      reader.readAsArrayBuffer(file)
     })
   }
 
   async loadImage(base64) {
     return new Promise((resolve, reject) => {
-      const image = new Image();
-      image.onload = () => resolve(image);
-      image.onerror = (error) => reject(error);
-      image.src = base64;
-    });
+      const image = new Image()
+      image.onload = () => resolve(image)
+      image.onerror = (error) => reject(error)
+      image.src = base64
+    })
   }
 
-  // Function to handle file selection, returning a promise with the file content
   async selectFile() {
     return new Promise((resolve, reject) => {
-      // Open the file dialog and return the file content once selected
       this.fileInput.onchange = async (event) => {
-        const file = event.target.files[0]  // Get the selected file
+
+        const file = event.target.files[0]
+
         if (file) {
           const fileExtension = this.getFileExtension(file.name)
           let fileData = { file, data: undefined, type: fileExtension }
+
           try {
             if (fileExtension === "gltf") {
               fileData.data = await this.readFileAsText(file)
@@ -72,9 +71,9 @@ export class FileInput {
               await image.decode()
               fileData.data = image
             }
-            resolve(fileData)  // Return the file content
+            resolve(fileData)
           } catch (error) {
-            reject(error)  // Handle file reading error
+            reject(error)
           }
         }
       }

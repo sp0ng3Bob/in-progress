@@ -122,30 +122,10 @@ function rotateUVs(uvs, angle) {
   return uvs
 }
 
-/* WebGL texture helper stuff, lol */
-function getUVFromGeoModel(model) {
-  return model.uvs
-}
-
-function getCurrentUVFromGeoModel(gl, model) {
-  gl.bindBuffer(gl.ARRAY_BUFFER, model.uvs)
-  const uvData = new Float32Array(model.uvs.length)
-  gl.getBufferSubData(gl.ARRAY_BUFFER, 0, uvData)
-  return uvData
-}
-
-function getCurrentDataFromGeoModel(gl, glBuffer) {
-  gl.bindBuffer(gl.ARRAY_BUFFER, glBuffer)
-  const data = new Float32Array(glBuffer.length)
-  gl.getBufferSubData(gl.ARRAY_BUFFER, 0, data)
-  return data
-}
-
 export function setUVBuffer(gl, model, newUVs) {
   gl.bindBuffer(gl.ARRAY_BUFFER, model.uvs)
   gl.bufferData(gl.ARRAY_BUFFER, newUVs, gl.STATIC_DRAW)
 }
-
 
 /* READ THIS:
   - https://webgl2fundamentals.org/webgl/lessons/webgl-3d-textures.html

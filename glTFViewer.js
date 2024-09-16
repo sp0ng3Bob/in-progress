@@ -116,7 +116,7 @@ export class App extends Application {
       newLightObject: {
         addLightColor: [255, 255, 180],
         addLightPosition: "0, 5, 0",
-        addLightIntensity: 1.0,
+        addLightIntensity: 0.5,
         addLightAttenuationConstantFactor: 1.0,
         addLightAttenuationLinearFactor: 0.09,
         addLightAttenuationQuadraticFactor: 0.032,
@@ -396,7 +396,7 @@ export class App extends Application {
     const sy = addGeoTextureFolder.add(this.state.newGeoObject.textureMapping, "scaleY", 0.1, 2)
 
     this.geoshadingModel = addGeoFolder.addFolder("Shading model")
-    this.geoshadingModel.add(this.state.newGeoObject.shadingModel, "selectedShadingModel", ["Lambert", "Phong"]).name("Shading model").listen().onChange(this.toggleShadingModel.bind(this))
+    this.geoshadingModel.add(this.state.newGeoObject.shadingModel, "selectedShadingModel", ["Lambert", "Phong", "Blinn-Phong"]).name("Shading model").listen().onChange(this.toggleShadingModel.bind(this))
     this.geoshadingModel.addColor(this.state.newGeoObject.shadingModel, "diffuseColor").name("Diffuse color").listen()
     this.geoshadingModel.addColor(this.state.newGeoObject.shadingModel, "specularColor").name("Specular color").listen()
     this.geoshadingModel.add(this.state.newGeoObject.shadingModel, "shadingShininess", 0, 300, 1).name("Shininess").listen()
@@ -404,12 +404,12 @@ export class App extends Application {
     geoInnerHole.__li.style.display = "none"
     geoLatBands.__li.style.display = "none"
     geoLonBands.__li.style.display = "none"
-    pd.__li.style.display = "none"
+    /*pd.__li.style.display = "none"
     tx.__li.style.display = "none"
     ty.__li.style.display = "none"
     r.__li.style.display = "none"
     sx.__li.style.display = "none"
-    sy.__li.style.display = "none"
+    sy.__li.style.display = "none"*/
     this.geoshadingModel.__controllers.at(-2).__li.style.display = "none"
     this.geoshadingModel.__controllers.at(-1).__li.style.display = "none"
     this.geometryActions.push([geoSize, geoPosition, geoRotation, geoColor, geoUV, geoInnerHole, geoLatBands, geoLonBands])
@@ -521,12 +521,21 @@ export class App extends Application {
     Object.keys(this.lightsList.__folders).forEach((f) => { this.lightsList.removeFolder(this.lightsList.__folders[f]) })
     for (let lightIndex in this.state.lightsList) {
       let lightFolder = this.lightsList.addFolder(lightIndex)
-      lightFolder.add(this.state.lightsList[lightIndex], "position").name("Light position").listen()
-      lightFolder.addColor(this.state.lightsList[lightIndex], "color").name("Light color").listen()
+      lightFolder.add(this.state.lightsList[lightIndex], "position").name("Light position").listen().onChange(() => this.updateGeoLights(lightIndex, "position"))
+      lightFolder.addColor(this.state.lightsList[lightIndex], "color").name("Light color").listen().onChange(() => this.updateGeoLights(lightIndex, "color"))
       lightFolder.add(this.state.lightsList[lightIndex], "intensity", 0, 10).name("Light intensity").listen()
       lightFolder.add(this.state.lightsList[lightIndex], "constantAttenuation", 0, 2, 0.1).name("Constant atten.").listen()
       lightFolder.add(this.state.lightsList[lightIndex], "linearAttenuation", 0, 1, 0.01).name("Linear atten.").listen()
       lightFolder.add(this.state.lightsList[lightIndex], "quadraticAttenuation", 0, 1, 0.001).name("Quadratic atten.").listen()
+    }
+  }
+
+  async updateGeoLights(lightIndex, property) {
+    if (property === "color") {
+      globalLightsList[lightIndex].baseColor = this.state.lightsList[lightIndex][property]
+    } else {
+      globalLightsList[lightIndex].geometry.position = this.state.lightsList[lightIndex][property]
+      await Geo.updateGeoBuffers(this.gl, this.renderer.programs.geo, globalLightsList[lightIndex])
     }
   }
 
@@ -551,7 +560,7 @@ export class App extends Application {
       geoTextureFolderTmp.add(this, "userGeoTextureSpecificFile").name("File on computer") //.onChange(this.userGeoTextureSpecificFile.bind(this))
       geoTextureFolderTmp.add(proceduralModelsList[geoIndex].texturing, "texture").name("Texture image").onChange((value) => this.updateGeoModelTexture(geoIndex, { "texture": value }))
       const updateTextureMappingsUI = (value) => {
-        if (value === "UV") {
+        /*if (value === "UV") {
           geoTextureFolderTmp.__controllers[3].__li.style.display = "none"
           geoTextureFolderTmp.__controllers[4].__li.style.display = "none"
           geoTextureFolderTmp.__controllers[5].__li.style.display = "none"
@@ -565,7 +574,7 @@ export class App extends Application {
           geoTextureFolderTmp.__controllers[6].__li.style.display = ""
           geoTextureFolderTmp.__controllers[7].__li.style.display = ""
           geoTextureFolderTmp.__controllers[8].__li.style.display = ""
-        }
+        }*/
         this.updateGeoModelTextureMapping(geoIndex, { "mapping": value })
       }
       geoTextureFolderTmp.add(proceduralModelsList[geoIndex].texturing.textureMappings, "mapping", ["UV", "Planar", "Cylindrical", "Spherical"]).onChange((value) => updateTextureMappingsUI(value))
@@ -587,7 +596,7 @@ export class App extends Application {
           geoShadingModel.__controllers[3].__li.style.display = ""
         }
       }
-      geoShadingModel.add(proceduralModelsList[geoIndex].shadingModel, "type", ["Lambert", "Phong"]).name("Shading model").listen().onChange(() => updateShadingModelUI())
+      geoShadingModel.add(proceduralModelsList[geoIndex].shadingModel, "type", ["Lambert", "Phong", "Blinn-Phong"]).name("Shading model").listen().onChange(() => updateShadingModelUI())
       geoShadingModel.addColor(proceduralModelsList[geoIndex].shadingModel, "diffuseColor").name("Diffuse color").listen()
       geoShadingModel.addColor(proceduralModelsList[geoIndex].shadingModel, "specularColor").name("Specular color").listen()
       geoShadingModel.add(proceduralModelsList[geoIndex].shadingModel, "shininess", 0, 300, 1).name("Shininess").listen()
@@ -960,7 +969,7 @@ export class App extends Application {
   }
 
   mappingChanged(val) {
-    switch (val) {
+    /*switch (val) {
       case "Planar":
         this.state.newGeoObject.textureMapping.projectionDirection = [0, 0, 1]
         for (let mappingTransform of this.geometryActions[2]) {
@@ -975,10 +984,10 @@ export class App extends Application {
         }
         break
       default:
-        for (let mappingTransform of this.geometryActions[2]) {
-          mappingTransform.__li.style.display = "none"
-        }
-    }
+      for (let mappingTransform of this.geometryActions[2]) {
+        mappingTransform.__li.style.display = "none"
+      }
+    }*/
   }
 
   changeWrappingS(val) {

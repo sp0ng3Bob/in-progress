@@ -7,7 +7,7 @@ const quat = glMatrix.quat
 export class Controls {
 
   constructor() {
-    this.zoomFactor = Math.PI / 100
+    this.zoomFactor = Math.PI / 180
     this.isDragging = false
     this.startPosition = { x: 0, y: 0 }
 
@@ -137,7 +137,7 @@ export class Controls {
   }
 
   setZoom(zoom) {
-    this.zoomFactor = zoom
+    //this.zoomFactor = Math.PI / 180 * zoom
   }
 
   //processZoomOnMobile(e)

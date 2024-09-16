@@ -206,6 +206,8 @@ vec3 material(vec3 baseColor, float metallic, float roughness, vec3 V, vec3 L, v
 void main() {
   // Base color
   vec4 color = uBaseColor;
+  color.rgb *= uAmbientalColor;
+
   if (uHasBaseColorTexture == 1) {
     color *= texture(uTexture, vTexCoord);
   }
@@ -241,7 +243,7 @@ void main() {
     normal = normalize(normalMap);
   }
 
-  /*vec3 fragPosition = vFragPosition;
+  vec3 fragPosition = vFragPosition;
 
   // View vector (assumed to be from camera position)
   vec3 V = normalize(uCameraPosition - fragPosition);
@@ -250,7 +252,7 @@ void main() {
   vec3 finalColor = vec3(0.0);
 
   // Process lights
-  for (int i = 0; i < uNumberOfLights; i++) {
+  /*for (int i = 0; i < uNumberOfLights; i++) {
     vec3 L = normalize(uLightPositions[i] - fragPosition);  // Light direction
     vec3 H = normalize(V + L);  // Half vector
     float NdotL = max(dot(normal, L), 0.0);  // Diffuse term
@@ -271,33 +273,52 @@ void main() {
     finalColor += lightContribution;
   }
 */
-  /*-----------*/
-
-  /*vec3 diffuse = vec3(0.0);
+  
   for (int i = 0; i < uNumberOfLights; i++) {
-    vec3 lightDir = normalize(uLightPositions[i] - vFragPosition);
-    float lambertian = max(dot(normal, lightDir), 0.0);
-    diffuse += uLightColors[i] * lambertian; // * uAmbientalColor;
-  }*/
+    vec3 lightPosition = uLightPositions[i];
+    vec3 lightColor = uLightColors[i];
+    float intensity = uLightIntensities[i];
+    float constant = uAttenuationConstant[i];
+    float linear = uAttenuationLinear[i];
+    float quadratic = uAttenuationQuadratic[i];
 
-  vec3 finalColor = color.rgb; //* diffuse;
+    vec3 L = lightPosition - fragPosition;
+    vec3 lightDir = normalize(L);
+    float distance = length(L);
+
+    // Adjusted Attenuation calculation
+    float attenuation = 1.0 / (constant + linear * distance + quadratic * (distance * distance));
+
+    // Lambertian Diffuse
+    float diff = max(dot(normal, lightDir), 0.0);
+    vec3 diffuse = (vec3(0.95) * uBaseColor.rgb * diff * intensity * attenuation) * 0.3;
+
+    // (Blinn-)Phong Specular (only if using Phong shading)
+    vec3 halfDir = normalize(lightDir + V);
+    float spec = pow(max(dot(halfDir, normal), 0.0), 150.0);
+    vec3 specular = vec3(0.95) * uBaseColor.rgb * spec * intensity;
+
+    // Apply diffuse, specular, and attenuation
+    //finalColor += (diffuse + specular) * (lightColor / pow(distance, 3.0));
+    finalColor += specular * (lightColor / pow(distance, 2.0));
+  }
+
+  finalColor += color.rgb;
 
   // Emissive component
   if (uHasEmissiveTexture == 1) {
     vec3 emissive = texture(uEmissiveTexture, textureCoords).rgb * uEmissiveFactor;
     finalColor += emissive;
-  } /*else {
-    finalColor += uEmissiveFactor;
-  }*/
+  }
 
   // Occlusion map
   if (uHasOcclusionTexture == 1) {
     float occlusion = 1.0 + uOcclusionStrength * (texture(uOcclusionTexture, textureCoords).r - 1.0);
     finalColor = mix(finalColor, finalColor * occlusion, uOcclusionStrength);
   }
-
-  // Final output color
-  oColor = vec4(mix(finalColor, uAmbientalColor, 0.1), color.a);
+  
+  finalColor = clamp(finalColor, 0.0, 1.0);
+  oColor = vec4(finalColor, uBaseColor.a);
 }`
 
 const geoVertex = `#version 300 es
@@ -340,7 +361,7 @@ uniform float uAttenuationLinear[MAX_LIGHTS];
 uniform float uAttenuationQuadratic[MAX_LIGHTS];
 
 // MATERIAL
-uniform int uShadingModel;   // 0 = Lambert, 1 = Phong
+uniform int uShadingModel;   // 0 = Lambert, 1 = Phong, 2 = Blinn-Phong
 uniform vec3 uDiffuseColor;
 uniform vec3 uSpecularColor;
 uniform float uShininess;
@@ -354,7 +375,7 @@ in vec3 vNormal;
 out vec4 oColor;
 
 void main() {
-  vec3 albedo = uBaseColor.rgb;
+  vec3 albedo = uBaseColor.rgb * uAmbientalColor;
 
   if (uHasBaseColorTexture == 1) {
     albedo *= texture(uTexture, vTexCoord).rgb;
@@ -382,34 +403,29 @@ void main() {
 
     // Lambertian Diffuse
     float diff = max(dot(normal, lightDir), 0.0);
-    vec3 diffuse = lightColor * uBaseColor.rgb * diff * intensity * attenuation;
+    //vec3 diffuse = lightColor * uBaseColor.rgb * diff * intensity * attenuation;
+    vec3 diffuse = (uDiffuseColor * uBaseColor.rgb * diff * intensity * attenuation) * 0.3;
 
-    // Phong Specular (only if using Phong shading)
+    // (Blinn-)Phong Specular (only if using Phong shading)
     vec3 specular = vec3(0.0);
-    /*if (uShadingModel == 1) {
+    if (uShadingModel == 1) {
       //vec3 reflectDir = max(dot(lightDir, normal), 0.0); //reflect(lightDir, normal);
       vec3 R = 2.0 * max(dot(lightDir, normal), 0.0) * normal - lightDir;
       float spec = pow(max(dot(R, viewDir), 0.0), uShininess);
-      specular = uSpecularColor * lightColor * uBaseColor.rgb * spec * intensity * attenuation;
-    }*/
-
-    if (uShadingModel == 1) {  // Blinn-Phong shading
+      specular = uSpecularColor * uBaseColor.rgb * spec * intensity * attenuation;
+    } else if (uShadingModel == 2) {  // Blinn-Phong shading
       vec3 halfDir = normalize(lightDir + viewDir);
       float spec = pow(max(dot(halfDir, normal), 0.0), uShininess);
-      specular = uSpecularColor * lightColor * uBaseColor.rgb * spec * intensity;
+      specular = uSpecularColor * uBaseColor.rgb * spec * intensity;
     }
 
     // Apply diffuse, specular, and attenuation
-    //vec3 finalLightColor = lightColor / pow(distance, 2.0);
-    finalColor += (lightColor / pow(distance, 2.0)) + (diffuse + specular);
-    //finalColor += lightColor * vec3(clamp(distance * 0.1, 0.0, 1.0));
-    //oColor = vec4(lightColor, 1.0);
+    finalColor += (diffuse + specular) * (lightColor / pow(distance, 3.0));
   }
 
-  // Clamp the final color to prevent over-brightness
-  finalColor = clamp(finalColor, 0.0, 1.0);
-
   finalColor += albedo;
+
+  finalColor = clamp(finalColor, 0.0, 1.0);
   oColor = vec4(finalColor, uBaseColor.a);
 }`
 
