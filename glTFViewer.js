@@ -12,7 +12,12 @@ import { AnimationsPlayer } from "./src/gltf/AnimationsPlayer.js"
 import { FileInput } from "./src/helpers/FileInput.js"
 import { Axes } from "./src/helpers/Axes.js"
 import { Controls } from "./src/helpers/Controls.js"
-import { PointLight, getPositionNormalised, getPositionString } from "./src/helpers/PointLight.js"
+import {
+  PointLight,
+  getNormalisedRGB,
+  getPositionNormalised,
+  getPositionString
+} from "./src/helpers/PointLight.js"
 import * as Geo from "./src/helpers/ProceduralGeometry.js"
 
 import { GUI } from "./src/lib/dat.gui.module.js"
@@ -91,7 +96,7 @@ const modelListCORS = {
 let scenesList = {}
 let camerasList = {}
 const globalLightsList = []
-let proceduralModelsList = [] //{}
+const proceduralModelsList = []
 const mipmapsList = { "NEAREST_MIPMAP_NEAREST": 9984, "NEAREST_MIPMAP_LINEAR": 9986, "LINEAR_MIPMAP_NEAREST": 9985, "LINEAR_MIPMAP_LINEAR": 9987 }
 const wrappingList = { "Clamp to edge": 33071, "Mirrored repeat": 33648, "Repeat": 10497 }
 const filteringList = { "Linear": 9729, "Nearest": 9728 }
@@ -153,7 +158,7 @@ export class App extends Application {
         texture: "./src/models/1Avocado/glTF/Avocado_baseColor.png",
         textureBlob: undefined,
         textureMapping: {
-          mapping: "UV",
+          mapping: "default UV",
           projectionDirection: [1, 0, 0],
           translateX: 0,
           translateY: 0,
@@ -175,13 +180,13 @@ export class App extends Application {
 
       //Globals
       lookingAt: "0, 0, 0",
-      enableGlobalSampler: false,
+      eye: [0, 2, 5],
       globalSampler: {
         wrappingModeS: 10497,
         wrappingModeT: 10497,
-        minFilterMode: 9728,
-        magFilterMode: 9728,
-        mipMaps: false
+        minFilterMode: mipmapsList["LINEAR_MIPMAP_LINEAR"],
+        magFilterMode: filteringList["Linear"],
+        mipMaps: true
       }
     }
 
@@ -204,7 +209,6 @@ export class App extends Application {
     // User Controls and logging
     this.controls = new Controls()
     this.controls.updateCamera(this.camera)
-    this.controls.setOrbitCenter(this.camera.lookingAt)
     this.freeCamera = 0
     this.cameraPositionLogs = logsDOMElement.querySelector("#cameraPosition")
     this.cameraRotationLogs = logsDOMElement.querySelector("#cameraRotation")
@@ -221,22 +225,11 @@ export class App extends Application {
 
     //debuging lights
     this.state.newGeoObject.size = 6
-    this.state.newGeoObject.position = "0,0,0"
+    this.state.newGeoObject.position = "0, 0, 0"
+    this.state.newGeoObject.rotation = "0.7071, 0, 0, 0.7071"
     this.addGeoPlane()
 
-    //this.initGUI()
-    //**/!* /!*!/ * !/*!/*!/*!/!*/!* /!*/! * /!*/! * /!*!/ * !/**!/!*/!*/*!/*!/*!*!/*!/*!/*!/*!/*/ !* /!*/! * /!************?**?*??
-    this.cameraTheta = 0.0   // Initial angle in the XY plane
-    this.cameraPhi = Math.PI / 2
-
     this.initGUI()
-
-    this.globalSampler = WebGL.createSampler(this.gl, {
-      wrpaS: this.state.globalSampler.wrappingModeS,
-      wrapT: this.state.globalSampler.wrappingModeT,
-      min: this.state.globalSampler.minFilterMode,
-      mag: this.state.globalSampler.magFilterMode
-    })
   }
 
   initGUI() {
@@ -260,16 +253,16 @@ export class App extends Application {
     this.modelSelector = this.modelsFolder.add(this.state, "selectedModel", { ...modelList, ...{ "-v- Embeded glLTs -v-": "" }, ...modelListCORS }).onChange(this.changeModel.bind(this))
     this.modelsFolder.add(this.state, "selectedModel").listen().onFinishChange(this.changeModel.bind(this)) //.domElement.children[0].setAttribute("disabled", "disabled") //.onFinishChange(this.changeModel.bind(this))
     this.modelsFolder.add(this, "userGltfFile").name("File on computer") //.onChange(this.userGltfFile.bind(this))
-    this.modelsFolder.open()
+    //this.modelsFolder.open()
 
     // Model information controls
     /* (3) Display model properties: number of vertices, number of indices, 
            and the size of the bounding box. */
     this.infoFolder = this.modelsFolder.addFolder("Model information")
-    this.infoFolder.add(this.state, "numberOfVertices").listen()
+    this.infoFolder.add(this.state, "numberOfVertices").listen().name("Vertices")
     //this.infoFolder.add(this.state, "numberOfMeshes").listen()
-    this.infoFolder.add(this.state, "numberOfIndices").listen()
-    this.infoFolder.add(this.state, "boundingBox").listen()
+    this.infoFolder.add(this.state, "numberOfIndices").listen().name("Indices")
+    this.infoFolder.add(this.state, "boundingBox").listen().name("Bounding box")
     this.infoFolder.__controllers.forEach((ctrl) => ctrl.domElement.children[0].setAttribute("disabled", "disabled"))
     //const modelPositioningFolder = this.infoFolder.addFolder("Model positioning")
     //modelPositioningFolder.add(this.scene.nodes[]).listen()
@@ -387,7 +380,7 @@ export class App extends Application {
     const addGeoTextureFolder = addGeoFolder.addFolder("Texture")
     const geoTextureFileChooser = addGeoTextureFolder.add(this, "userGeoTextureFile").name("File on computer") //.onChange(this.userGeoTextureFile.bind(this))
     const geoUV = addGeoTextureFolder.add(this.state.newGeoObject, "texture").name("Texture image").listen()
-    addGeoTextureFolder.add(this.state.newGeoObject.textureMapping, "mapping", ["UV", "Planar", "Cylindrical", "Spherical"]).listen().onChange(this.mappingChanged.bind(this))
+    addGeoTextureFolder.add(this.state.newGeoObject.textureMapping, "mapping", ["default UV", "Planar", "Cylindrical", "Spherical", "From a local file"]).listen().onChange(this.mappingChanged.bind(this))
     const pd = addGeoTextureFolder.add(this.state.newGeoObject.textureMapping, "projectionDirection", projectionDirections).listen()
     const tx = addGeoTextureFolder.add(this.state.newGeoObject.textureMapping, "translateX", -1, 1, 0.1)
     const ty = addGeoTextureFolder.add(this.state.newGeoObject.textureMapping, "translateY", -1, 1, 0.1)
@@ -404,8 +397,8 @@ export class App extends Application {
     geoInnerHole.__li.style.display = "none"
     geoLatBands.__li.style.display = "none"
     geoLonBands.__li.style.display = "none"
-    /*pd.__li.style.display = "none"
-    tx.__li.style.display = "none"
+    pd.__li.style.display = "none"
+    /*tx.__li.style.display = "none"
     ty.__li.style.display = "none"
     r.__li.style.display = "none"
     sx.__li.style.display = "none"
@@ -445,16 +438,18 @@ export class App extends Application {
     this.globalFolder.add(this.state, "lookingAt").listen().onFinishChange(this.changeFocalPoint.bind(this))
 
     this.globalTextureFolder = this.globalFolder.addFolder("Texture options")
-    this.globalTextureFolder.add(this.state, "enableGlobalSampler").listen().onChange(this.toggleGlobalsSampler.bind(this))
-    this.globalTextureFolder.add(this.state.globalSampler, "wrappingModeS", wrappingList).listen().onChange(this.changeWrappingS.bind(this))
-    this.globalTextureFolder.add(this.state.globalSampler, "wrappingModeT", wrappingList).listen().onChange(this.changeWrappingT.bind(this))
-    this.globalTextureFolder.add(this.state.globalSampler, "mipMaps").listen().onChange(this.changeMips.bind(this))
-    this.globalTextureFolder.add(this.state.globalSampler, "minFilterMode", { ...filteringList }).listen().onChange(this.changeFilteringMin.bind(this))
-    this.globalTextureFolder.add(this.state.globalSampler, "magFilterMode", { ...filteringList }).listen().onChange(this.changeFilteringMag.bind(this))
+    this.globalTextureFolder.add(this, "resetGlobalSamplerSettings").name("Reset to defaults for all models")
+    const wS = this.globalTextureFolder.add(this.state.globalSampler, "wrappingModeS", wrappingList).listen().onChange(this.changeWrappingS.bind(this))
+    const wT = this.globalTextureFolder.add(this.state.globalSampler, "wrappingModeT", wrappingList).listen().onChange(this.changeWrappingT.bind(this))
+    const mb = this.globalTextureFolder.add(this.state.globalSampler, "mipMaps").listen().onChange(this.changeMips.bind(this))
+    const fN = this.globalTextureFolder.add(this.state.globalSampler, "minFilterMode", { ...mipmapsList }).listen().onChange(this.changeFilteringMin.bind(this))
+    const fG = this.globalTextureFolder.add(this.state.globalSampler, "magFilterMode", { ...filteringList }).listen().onChange(this.changeFilteringMag.bind(this))
 
-    Object.keys(this.globalTextureFolder.__controllers).slice(1).forEach(controller => {
+    /*Object.keys(this.globalTextureFolder.__controllers).slice(1).forEach(controller => {
       this.globalTextureFolder.__controllers[controller].__li.style.display = "none"
-    })
+    })*/
+
+    this.globalSamplerGUI = [wS, wT, mb, fN, fG]
   }
 
   updateGUI() {
@@ -535,7 +530,7 @@ export class App extends Application {
       globalLightsList[lightIndex].baseColor = this.state.lightsList[lightIndex][property]
     } else {
       globalLightsList[lightIndex].geometry.position = this.state.lightsList[lightIndex][property]
-      await Geo.updateGeoBuffers(this.gl, this.renderer.programs.geo, globalLightsList[lightIndex])
+      await Geo.updateGeoBuffers(this.gl, globalLightsList[lightIndex])
     }
   }
 
@@ -543,6 +538,13 @@ export class App extends Application {
     Object.keys(this.geoModelsList.__folders).forEach((f) => { this.geoModelsList.removeFolder(this.geoModelsList.__folders[f]) })
     for (let geoIndex in proceduralModelsList) {
       const modelFolder = this.geoModelsList.addFolder(`${geoIndex}: ${proceduralModelsList[geoIndex].type}`)
+
+      const modelInfoFolder = modelFolder.addFolder("Model information")
+      modelInfoFolder.add(proceduralModelsList[geoIndex].info, "numberOfVertices").listen().name("Vertices")
+      modelInfoFolder.add(proceduralModelsList[geoIndex].info, "numberOfIndices").listen().name("Indices")
+      modelInfoFolder.add(proceduralModelsList[geoIndex].info, "boundingBox").listen().name("Bounding box")
+      modelInfoFolder.__controllers.forEach((ctrl) => ctrl.domElement.children[0].setAttribute("disabled", "disabled"))
+
       const geoGeometryFolder = modelFolder.addFolder("Geometry")
       geoGeometryFolder.add(proceduralModelsList[geoIndex].geometry, "size", 0.5, 10, 0.1).name("Size").listen().onChange((value) => this.updateGeoModelBuffers(geoIndex, { "size": value }))
       if (proceduralModelsList[geoIndex].type === "Torus") {
@@ -559,25 +561,21 @@ export class App extends Application {
       const geoTextureFolderTmp = modelFolder.addFolder("Texture")
       geoTextureFolderTmp.add(this, "userGeoTextureSpecificFile").name("File on computer") //.onChange(this.userGeoTextureSpecificFile.bind(this))
       geoTextureFolderTmp.add(proceduralModelsList[geoIndex].texturing, "texture").name("Texture image").onChange((value) => this.updateGeoModelTexture(geoIndex, { "texture": value }))
+
+      let tmpToPreventFileChooserPopup = true
       const updateTextureMappingsUI = (value) => {
-        /*if (value === "UV") {
-          geoTextureFolderTmp.__controllers[3].__li.style.display = "none"
-          geoTextureFolderTmp.__controllers[4].__li.style.display = "none"
-          geoTextureFolderTmp.__controllers[5].__li.style.display = "none"
-          geoTextureFolderTmp.__controllers[6].__li.style.display = "none"
-          geoTextureFolderTmp.__controllers[7].__li.style.display = "none"
-          geoTextureFolderTmp.__controllers[8].__li.style.display = "none"
-        } else {
-          geoTextureFolderTmp.__controllers[3].__li.style.display = ""
-          geoTextureFolderTmp.__controllers[4].__li.style.display = ""
-          geoTextureFolderTmp.__controllers[5].__li.style.display = ""
-          geoTextureFolderTmp.__controllers[6].__li.style.display = ""
-          geoTextureFolderTmp.__controllers[7].__li.style.display = ""
-          geoTextureFolderTmp.__controllers[8].__li.style.display = ""
-        }*/
-        this.updateGeoModelTextureMapping(geoIndex, { "mapping": value })
+        if (!tmpToPreventFileChooserPopup) {
+          if (value === "From a local file") {
+            this.userGeoTextureMappingFile(geoIndex)
+          } else if (value === "default UV") {
+            geoTextureFolderTmp.__controllers[3].__li.style.display = "none"
+          } else {
+            geoTextureFolderTmp.__controllers[3].__li.style.display = ""
+          }
+          this.updateGeoModelTextureMapping(geoIndex, { "mapping": value })
+        }
       }
-      geoTextureFolderTmp.add(proceduralModelsList[geoIndex].texturing.textureMappings, "mapping", ["UV", "Planar", "Cylindrical", "Spherical"]).onChange((value) => updateTextureMappingsUI(value))
+      geoTextureFolderTmp.add(proceduralModelsList[geoIndex].texturing.textureMappings, "mapping", ["default UV", "Planar", "Cylindrical", "Spherical", "From a local file"]).onChange((value) => updateTextureMappingsUI(value))
       geoTextureFolderTmp.add(proceduralModelsList[geoIndex].texturing.textureMappings, "projectionDirection", projectionDirections).onChange((value) => this.updateGeoModelTextureMapping(geoIndex, { "projectionDirection": getPositionNormalised(value) })) //projectionDirections[value] }))
       geoTextureFolderTmp.add(proceduralModelsList[geoIndex].texturing.textureMappings, "translateX", -1, 1, 0.1).onChange((value) => this.updateGeoModelTextureMapping(geoIndex, { "translateX": value }))
       geoTextureFolderTmp.add(proceduralModelsList[geoIndex].texturing.textureMappings, "translateY", -1, 1, 0.1).onChange((value) => this.updateGeoModelTextureMapping(geoIndex, { "translateY": value }))
@@ -585,6 +583,7 @@ export class App extends Application {
       geoTextureFolderTmp.add(proceduralModelsList[geoIndex].texturing.textureMappings, "scaleX", 0.1, 2).onChange((value) => this.updateGeoModelTextureMapping(geoIndex, { "scaleX": value }))
       geoTextureFolderTmp.add(proceduralModelsList[geoIndex].texturing.textureMappings, "scaleY", 0.1, 2).onChange((value) => this.updateGeoModelTextureMapping(geoIndex, { "scaleY": value }))
       updateTextureMappingsUI(proceduralModelsList[geoIndex].texturing.textureMappings.mapping)
+      tmpToPreventFileChooserPopup = false
 
       const geoShadingModel = modelFolder.addFolder("Shading model")
       const updateShadingModelUI = () => {
@@ -605,7 +604,7 @@ export class App extends Application {
   }
 
   setClearColor(color) {
-    this.renderer.changeClearColor(color)
+    this.renderer.changeClearColor(getNormalisedRGB(color))
   }
 
   toggleLogs() {
@@ -657,6 +656,22 @@ export class App extends Application {
     })
   }
 
+  async userGeoTextureMappingFile(geoIndex = undefined) {
+    this.fileChooser.openFileDialog()
+    await this.fileChooser.selectFile().then((fileData) => {
+      const userDefinedUVs = fileData.data.split(",").map(Number)
+
+      if (geoIndex) {
+        proceduralModelsList[geoIndex].texturing.textureMappingsFromUser = userDefinedUVs
+        Geo.updateGeoTextureMapping(this.gl, proceduralModelsList[geoIndex])
+      } else {
+        this.state.newGeoObject.textureMappingsFromUser = userDefinedUVs
+      }
+    }).catch((error) => {
+      console.error('Error loading file:', error)
+    })
+  }
+  /****************************************************************************************************************/
 
   /* LIGHTS */
   async addPointLight(position = undefined, color = undefined, intensity = undefined, constant = undefined, linear = undefined, quadratic = undefined) {
@@ -671,7 +686,7 @@ export class App extends Application {
       }
 
       const sphereOptions = {
-        radius: 0.01,
+        radius: 0.05,
         position: getPositionNormalised(options.position),
         rotation: [0, 0, 0, 1],
         latBands: 18,
@@ -687,8 +702,9 @@ export class App extends Application {
       }
 
       this.state.lightsList.push(new PointLight(options))
-      globalLightsList.push(await Geo.createSphere(this.gl, this.renderer.programs.gltf, sphereOptions))
+      globalLightsList.push(await Geo.createSphere(this.gl, this.renderer.programs.geo, sphereOptions))
       this.updateGUIlightsList()
+      //this.updateLightsUniforms()
     }
   }
 
@@ -715,6 +731,7 @@ export class App extends Application {
     }
 
     this.updateGUIlightsList()
+    //this.updateLightsUniforms()
   }
 
   removeLastLightOfType(type) {
@@ -728,8 +745,54 @@ export class App extends Application {
   }
   /****************************************************************************************************************/
 
-
   /* glTF MODELS */
+  async changeModel(id) {
+    if (this.modelSelector.domElement.children[0].classList.contains("disabled")) return
+
+    if (this.animationsPlayer.isPlaying) {
+      this.stopAnimations()
+    }
+
+    this.modelSelector.domElement.children[0].setAttribute("disabled", "disabled")
+    this.modelSelector.domElement.children[0].blur()
+
+    model = id
+    await this.loadSceneAndCamera()
+
+    if (this.state.gltfPositioning) {
+      this.gltfModelPositioning()
+    }
+
+    this.renderer.prepareScene(this.scene)
+
+    if (this.scene.animations) {
+      (Object.keys(this.state.animationsList) ?? []).forEach(key => delete this.state.animationsList[key])
+      this.animationsPlayer.addAnimations(this.scene.animations)
+      for (const animation in this.animationsPlayer.animations) {
+        this.state.animationsList[animation] = true
+        this.animationsPlayer.toggleAnimationToPlaylist(animation)
+      }
+    } else {
+      this.animationsPlayer.delete()
+    }
+
+    this.updateGUI()
+
+    this.controls.updateCamera(this.camera)
+
+    this.modelSelector.domElement.children[0].removeAttribute("disabled")
+    this.modelSelector.domElement.children[0].focus()
+  }
+
+  extractPosIndBB(mesh) {
+    this.glTFPosition = this.loader.gltf.meshes[mesh].primitives[0].attributes.POSITION
+    this.glTFIndices = this.loader.gltf.meshes[mesh].primitives[0].indices ?? 0
+    this.glTFBox = {
+      "min": this.loader.gltf.accessors[this.glTFPosition].min,
+      "max": this.loader.gltf.accessors[this.glTFPosition].max
+    }
+  }
+
   gltfModelPositioning() {
     const dialog = document.querySelector("#transformGltfDialog")
     dialog.showModal()
@@ -822,6 +885,21 @@ export class App extends Application {
       this.geometryActions[1][6].__li.style.display = "none"
       this.geometryActions[1][7].__li.style.display = "none"
     }
+
+    // Default mapping direction
+    /*if (this.state.newGeoObject.textureMapping.mapping === "UV") {
+      switch (this.state.newGeoObject.shape) {
+        case "Plane":
+          this.state.newGeoObject.textureMapping.projectionDirection = [0, 1, 0]
+          break
+        case "Cube":
+          break
+        case "Sphere":
+          break
+        case "Torus":
+          break
+      }
+    }*/
   }
 
   async addGeoPlane() {
@@ -838,6 +916,10 @@ export class App extends Application {
     options.texture = this.state.newGeoObject.texture
     options.textureBlob = this.state.newGeoObject.textureBlob
     options.textureMappings = this.state.newGeoObject.textureMapping
+
+    if (this.state.newGeoObject.textureMappingsFromUser) {
+      options.textureMappingsFromUser = this.state.newGeoObject.textureMappingsFromUser
+    }
 
     proceduralModelsList.push(await Geo.createPlane(this.gl, this.renderer.programs.geo, options))
     this.updateGUIgeoList()
@@ -858,6 +940,10 @@ export class App extends Application {
     options.texture = this.state.newGeoObject.texture
     options.textureBlob = this.state.newGeoObject.textureBlob
     options.textureMappings = this.state.newGeoObject.textureMapping
+
+    if (this.state.newGeoObject.textureMappingsFromUser) {
+      options.textureMappingsFromUser = this.state.newGeoObject.textureMappingsFromUser
+    }
 
     proceduralModelsList.push(await Geo.createCube(this.gl, this.renderer.programs.geo, options))
     this.updateGUIgeoList()
@@ -880,6 +966,10 @@ export class App extends Application {
     options.textureMappings = this.state.newGeoObject.textureMapping
     options.latBands = this.state.newGeoObject.lat
     options.lonBands = this.state.newGeoObject.lon
+
+    if (this.state.newGeoObject.textureMappingsFromUser) {
+      options.textureMappingsFromUser = this.state.newGeoObject.textureMappingsFromUser
+    }
 
     proceduralModelsList.push(await Geo.createSphere(this.gl, this.renderer.programs.geo, options))
     this.updateGUIgeoList()
@@ -904,6 +994,10 @@ export class App extends Application {
     options.tubularSegments = this.state.newGeoObject.lon
     options.holeRadius = this.state.newGeoObject.innerHole
 
+    if (this.state.newGeoObject.textureMappingsFromUser) {
+      options.textureMappingsFromUser = this.state.newGeoObject.textureMappingsFromUser
+    }
+
     proceduralModelsList.push(await Geo.createTorus(this.gl, this.renderer.programs.geo, options))
     this.updateGUIgeoList()
     this.state.newGeoObject.textureBlob = undefined
@@ -912,7 +1006,7 @@ export class App extends Application {
   async updateGeoModelBuffers(geoIndex, newValue) {
     const property = Object.keys(newValue)[0]
     proceduralModelsList[geoIndex].geometry[property] = newValue[property]
-    await Geo.updateGeoBuffers(this.gl, this.renderer.programs.geo, proceduralModelsList[geoIndex])
+    await Geo.updateGeoBuffers(this.gl, proceduralModelsList[geoIndex])
   }
 
   async updateGeoModelTexture(geoIndex, newValue) {
@@ -924,7 +1018,7 @@ export class App extends Application {
   async updateGeoModelTextureMapping(geoIndex, newValue) {
     const property = Object.keys(newValue)[0]
     proceduralModelsList[geoIndex].texturing.textureMappings[property] = newValue[property]
-    await Geo.updateGeoTextureMapping(this.gl, this.renderer.programs.geo, proceduralModelsList[geoIndex])
+    await Geo.updateGeoTextureMapping(this.gl, proceduralModelsList[geoIndex])
   }
 
   removeLastGeoNode() {
@@ -951,151 +1045,124 @@ export class App extends Application {
   }
   /****************************************************************************************************************/
 
-
   /* TEXTURES */
-  toggleGlobalsSampler(val) {
-    //TODO - use global sampler for all textures in the scene, even for gltf model
-    if (val) {
-      Object.keys(this.globalTextureFolder.__controllers).slice(1).forEach(controller => {
-        this.globalTextureFolder.__controllers[controller].__li.style.display = ""
-      })
-      this.scene.globalSampler = this.globalSampler
-    } else {
-      Object.keys(this.globalTextureFolder.__controllers).slice(1).forEach(controller => {
-        this.globalTextureFolder.__controllers[controller].__li.style.display = "none"
-      })
-      this.scene.globalSampler = undefined
+  resetGlobalSamplerSettings() {
+    proceduralModelsList.forEach(geo => Geo.resetSampler(this.gl, geo))
+    this.renderer.resetSampler()
+
+    this.stopTriggeringPlease = true
+
+    for (const c of this.globalTextureFolder.__controllers) {
+      if (c.property === "wrappingModeS") {
+        c.setValue(this.gl.REPEAT)
+      } else if (c.property === "wrappingModeT") {
+        c.setValue(this.gl.REPEAT)
+      } else if (c.property === "mipMaps") {
+        c.setValue(true)
+      } else if (c.property === "minFilterMode") {
+        if (Object.values(filteringList).includes(this.state.globalSampler.minFilterMode)) {
+          c.setValue(this.gl.LINEAR_MIPMAP_LINEAR).options({ ...mipmapsList })
+        } else {
+          c.setValue(this.gl.LINEAR_MIPMAP_LINEAR)
+        }
+      } else if (c.property === "magFilterMode") {
+        c.setValue(this.gl.LINEAR)
+      }
     }
+
+    this.stopTriggeringPlease = false
   }
 
   mappingChanged(val) {
-    /*switch (val) {
-      case "Planar":
-        this.state.newGeoObject.textureMapping.projectionDirection = [0, 0, 1]
-        for (let mappingTransform of this.geometryActions[2]) {
-          mappingTransform.__li.style.display = ""
-        }
-        break
-      case "Cylindrical":
-      case "Spherical":
-        this.state.newGeoObject.textureMapping.projectionDirection = [0, 1, 0]
-        for (let mappingTransform of this.geometryActions[2]) {
-          mappingTransform.__li.style.display = ""
-        }
-        break
-      default:
-      for (let mappingTransform of this.geometryActions[2]) {
-        mappingTransform.__li.style.display = "none"
-      }
-    }*/
-  }
-
-  changeWrappingS(val) {
-    this.updateGlobalSampler()
-
-    for (let o of this.loader.cache.values()) {
-      if (o instanceof Texture) {
-        this.renderer.setWrappingModeS(Number(val))
-      }
+    if (val === "From a local file") {
+      this.userGeoTextureMappingFile()
+    } else if (val === "default UV") {
+      this.geometryActions[2][0].__li.style.display = "none"
+      this.state.newGeoObject.textureMappingsFromUser = undefined
+    } else {
+      this.geometryActions[2][0].__li.style.display = ""
+      this.state.newGeoObject.textureMappingsFromUser = undefined
     }
   }
 
-  changeWrappingT(val) {
-    this.updateGlobalSampler()
+  changeWrappingS() {
+    if (!this.stopTriggeringPlease) {
+      const mode = Number(this.state.globalSampler.wrappingModeS)
 
-    for (let o of this.loader.cache.values()) {
-      if (o instanceof Texture) {
-        this.renderer.setWrappingModeT(Number(val))
-      }
+      proceduralModelsList.forEach(geo => {
+        this.gl.samplerParameteri(geo.sampler, this.gl.TEXTURE_WRAP_S, mode)
+        //this.gl.bindTexture(this.gl.TEXTURE_2D, geo.texture)
+        //this.gl.texParameteri(this.gl.TEXTURE_2D, this.gl.TEXTURE_WRAP_S, mode)
+      })
+      this.renderer.setWrappingModeS(mode)
     }
   }
 
-  changeFilteringMin(val) {
-    this.updateGlobalSampler()
+  changeWrappingT() {
+    if (!this.stopTriggeringPlease) {
+      const mode = Number(this.state.globalSampler.wrappingModeT)
 
-    for (let o of this.loader.cache.values()) {
-      if (o instanceof Texture) {
-        this.renderer.setFilteringModeMin(Number(val))
-      }
+      proceduralModelsList.forEach(geo => {
+        this.gl.samplerParameteri(geo.sampler, this.gl.TEXTURE_WRAP_T, mode)
+        //this.gl.bindTexture(this.gl.TEXTURE_2D, geo.texture)
+        //this.gl.texParameteri(this.gl.TEXTURE_2D, this.gl.TEXTURE_WRAP_T, mode)
+      })
+      this.renderer.setWrappingModeT(mode)
     }
   }
 
-  changeFilteringMag(val) {
-    this.updateGlobalSampler()
+  changeFilteringMin() {
+    if (!this.stopTriggeringPlease) {
+      const mode = Number(this.state.globalSampler.minFilterMode)
 
-    for (let o of this.loader.cache.values()) {
-      if (o instanceof Texture) {
-        this.renderer.setFilteringModeMag(Number(val))
-      }
+      proceduralModelsList.forEach(geo => {
+        this.gl.samplerParameteri(geo.sampler, this.gl.TEXTURE_MIN_FILTER, mode)
+        //this.gl.bindTexture(this.gl.TEXTURE_2D, geo.texture)
+        //this.gl.texParameteri(this.gl.TEXTURE_2D, this.gl.TEXTURE_MIN_FILTER, mode)
+      })
+      this.renderer.setFilteringModeMin(mode)
+    }
+  }
+
+  changeFilteringMag() {
+    if (!this.stopTriggeringPlease) {
+      const mode = Number(this.state.globalSampler.magFilterMode)
+
+      proceduralModelsList.forEach(geo => {
+        this.gl.samplerParameteri(geo.sampler, this.gl.TEXTURE_MAG_FILTER, mode)
+        //this.gl.bindTexture(this.gl.TEXTURE_2D, geo.texture)
+        //this.gl.texParameteri(this.gl.TEXTURE_2D, this.gl.TEXTURE_MAG_FILTER, mode)
+      })
+      this.renderer.setFilteringModeMag(mode)
     }
   }
 
   changeMips(val) {
-    if (val) {
-      this.state.globalSampler.minFilterMode = 9984
-      this.globalTextureFolder.__controllers
-        .find(c => c.property === "minFilterMode")
-        .options({ ...mipmapsList })
-    } else {
-      this.state.globalSampler.minFilterMode = 9728
-      this.globalTextureFolder.__controllers
-        .find(c => c.property === "minFilterMode")
-        .options({ ...filteringList })
+    if (!this.stopTriggeringPlease) {
+      if (val) {
+        //this.state.globalSampler.minFilterMode = this.gl.NEAREST_MIPMAP_NEAREST //9984
+        this.globalTextureFolder.__controllers
+          .find(c => c.property === "minFilterMode")
+          .setValue(this.gl.LINEAR_MIPMAP_LINEAR)
+          .options({ ...mipmapsList })
+
+        //this.changeFilteringMin()
+        //proceduralModelsList.forEach(geo => Geo.generateMipmaps(this.gl, geo.texture))
+        //this.renderer.generateMipMapsForMainTexture()
+      } else {
+        //this.state.globalSampler.minFilterMode = 9728
+        this.globalTextureFolder.__controllers
+          .find(c => c.property === "minFilterMode")
+          .setValue(this.gl.LINEAR)
+          .options({ ...filteringList })
+
+        //this.changeFilteringMin()
+      }
+
+      this.changeFilteringMin()
     }
-
-    this.updateGlobalSampler()
-
-    this.renderer.setMipMaps(val, { min: this.state.globalSampler.minFilterMode })
-    //this.renderer.prepareScene(this.scene)
-  }
-
-  updateGlobalSampler() {
-    this.globalSampler = WebGL.createSampler(this.gl, {
-      wrpaS: this.state.globalSampler.wrappingModeS,
-      wrapT: this.state.globalSampler.wrappingModeT,
-      min: this.state.globalSampler.minFilterMode,
-      mag: this.state.globalSampler.magFilterMode
-    })
   }
   //****************************************************************************************************************
-
-  async changeModel(id) {
-    if (this.modelSelector.domElement.children[0].classList.contains("disabled")) return
-
-    if (this.animationsPlayer.isPlaying) {
-      this.stopAnimations()
-    }
-
-    this.modelSelector.domElement.children[0].setAttribute("disabled", "disabled")
-    this.modelSelector.domElement.children[0].blur()
-
-    model = id
-    await this.loadSceneAndCamera()
-
-    if (this.state.gltfPositioning) {
-      this.gltfModelPositioning()
-    }
-
-    this.renderer.prepareScene(this.scene)
-
-    if (this.scene.animations) {
-      (Object.keys(this.state.animationsList) ?? []).forEach(key => delete this.state.animationsList[key])
-      this.animationsPlayer.addAnimations(this.scene.animations)
-      for (const animation in this.animationsPlayer.animations) {
-        this.state.animationsList[animation] = true
-        this.animationsPlayer.toggleAnimationToPlaylist(animation)
-      }
-    } else {
-      this.animationsPlayer.delete()
-    }
-
-    this.updateGUI()
-
-    this.controls.updateCamera(this.camera)
-
-    this.modelSelector.domElement.children[0].removeAttribute("disabled")
-    this.modelSelector.domElement.children[0].focus()
-  }
 
   /* glTF ANIMATIONS */
   playAnimations() {
@@ -1119,6 +1186,7 @@ export class App extends Application {
   }
   //****************************************************************************************************************
 
+  /* glTF scene and camera */
   async loadSceneAndCamera(type = undefined) {
     if (this.state.selectedModel != "") {
       (type ? await this.loader.load(model, type) : await this.loader.load(model))
@@ -1126,15 +1194,6 @@ export class App extends Application {
       this.state.selectedScene = this.loader.defaultScene
       await this.loadScenes()
       await this.loadCameras()
-    }
-  }
-
-  extractPosIndBB(mesh) {
-    this.glTFPosition = this.loader.gltf.meshes[mesh].primitives[0].attributes.POSITION
-    this.glTFIndices = this.loader.gltf.meshes[mesh].primitives[0].indices ?? 0
-    this.glTFBox = {
-      "min": this.loader.gltf.accessors[this.glTFPosition].min,
-      "max": this.loader.gltf.accessors[this.glTFPosition].max
     }
   }
 
@@ -1175,7 +1234,7 @@ export class App extends Application {
     const modelSizeY = max[1] - min[1]
     const modelSizeZ = max[2] - min[2]
     const maxModelSize = Math.max(modelSizeX, modelSizeY, modelSizeZ)
-    this.controls.setZoom(maxModelSize / 5)
+    this.controls.setZoom(maxModelSize)
 
     this.state.lookingAt = vec3.fromValues((min[0] + max[0]) / 2, (min[1] + max[1]) / 2, (min[2] + max[2]) / 2)
     this.state.eye = vec3.fromValues(...this.state.lookingAt)
@@ -1215,10 +1274,24 @@ export class App extends Application {
     this.cameras[this.freeCamera].updateMatrix()
 
     this.controls.updateCamera(this.camera)
-    this.controls.setOrbitCenter(this.camera.lookingAt)
   }
 
-  setupFreeCamera() {
+  changeScene(id) {
+    this.scene = this.scenes[id]
+    const meshID = this.loader.gltf.scenes[id].nodes[0]
+    this.extractPosIndBB(meshID)
+    this.renderer.prepareScene(this.scene)
+    this.updateGUI()
+  }
+
+  changeCamera(id) {
+    id = Number(id)
+    this.camera = this.cameras[id - 1 < 0 ? id : id--]
+    this.controls.updateCamera(this.camera)
+  }
+  //****************************************************************************************************************
+
+  setUpFreeCamera() {
     const viewMatrix = mat4.create()
     mat4.lookAt(viewMatrix, [0, 2, 5], [0, 0, 0], [0, 1, 0])
     const freeCamera = new PerspectiveCamera({
@@ -1246,48 +1319,32 @@ export class App extends Application {
   }
 
   changeFocalPoint(val) {
-    //mat4.lookAt(this.camera.matrix, this.state.eye, val.split(",").map(Number), [0, 1, 0])
-    this.camera.lookingAt = val.split(",").map(Number)
-    //mat4.lookAt(this.camera.matrix, this.camera.translation, this.camera.lookingAt, [0, 1, 0])
-    //this.camera.lookAt(this.camera.lookingAt)
-    this.controls.setOrbitCenter(this.camera.lookingAt)
-  }
-
-  changeScene(id) {
-    this.scene = this.scenes[id]
-    const meshID = this.loader.gltf.scenes[id].nodes[0]
-    this.extractPosIndBB(meshID)
-    this.renderer.prepareScene(this.scene)
-    this.updateGUI()
-  }
-
-  changeCamera(id) {
-    id = Number(id)
-    this.camera = this.cameras[id - 1 < 0 ? id : id--]
+    this.camera.lookingAt = getPositionNormalised(val)
+    mat4.lookAt(this.camera.matrix, this.state.eye, this.camera.lookingAt, [0, 1, 0])
+    mat4.invert(this.camera.matrix, this.camera.matrix)
+    this.camera.updateTRS()
     this.controls.updateCamera(this.camera)
   }
 
   async start() {
     this.loader = new GLTFLoader()
     this.renderer = new Renderer(this.gl)
-    //await this.loadCameras()
-    this.setupFreeCamera()
-    this.scene = { nodes: [], geoNodes: [], lights: [] }
-
-    //delete this**********************!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!
-    //this.increment = 0.05
-
+    //this.updateLightsUniforms()
+    this.setUpFreeCamera()
+    this.scene = {
+      nodes: [],
+      transparentNodes: [],
+      opaqueNodes: [],
+      geoNodes: [],
+      lights: []
+    }
   }
 
-  async render() {
+  render() {
     if (this.renderer) {
 
       /* Random shiet */
-      if (this.state.rotateModelEnabled) {
-        //this.rotateGltfModel(this.scene.nodes, [0, 0.5, 0])
-        //await this.rotateGeoModels(proceduralModelsList, [0, 0.5, 0])
-        this.controls.rotate(undefined, 5, 0)
-      } // over Y
+      if (this.state.rotateModelEnabled) { this.controls.rotate(undefined, 13, 0) }
 
       /* glTF Animations */
       if (this.animationsPlayer.animations && this.animationsPlayer.isPlaying) {
@@ -1308,10 +1365,7 @@ export class App extends Application {
       this.cameraRotationLogs.textContent = `Pitch: ${crx.toFixed(3)}°, Yaw: ${cry.toFixed(3)}°, Roll: ${crz.toFixed(3)}°`
       this.animationTimeLogs.textContent = this.animationsPlayer.getCurrentTime().toFixed(3)
 
-
-      /* glTF Skinning matrix - TODO */
-
-
+      /* Setting render objects */
       this.scene.geoNodes = [...proceduralModelsList]
       this.scene.lights = this.state.drawLights ? [...globalLightsList] : []
       this.renderer.render(this.scene, this.camera, this.lights())
@@ -1320,6 +1374,10 @@ export class App extends Application {
       if (this.state.axesShown) { this.axes.draw(this.camera) }
     }
   }
+
+  /*updateLightsUniforms() {
+    this.renderer.prepareLights(this.lights())
+  }*/
 
   lights() {
     let lights = this.state.lightsList
@@ -1349,7 +1407,7 @@ export class App extends Application {
       quat.multiply(rotation, rotationQuaternion, getPositionNormalised(geo.geometry.rotation))
       quat.normalize(rotation, rotation)
       geo.geometry.rotation = getPositionString(rotation)
-      await Geo.updateGeoBuffers(this.gl, this.renderer.programs.geo, geo)
+      await Geo.updateGeoBuffers(this.gl, geo)
     }
   }
 

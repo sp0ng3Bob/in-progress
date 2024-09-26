@@ -8,4 +8,13 @@ export class Primitive {
     this.material = options.material ?? new Material()
     this.targets = [...(options.targets ?? [])] //{ ...(options.targets ?? []) } //{}) }
   }
+
+  clone() {
+    return new Primitive({
+      ...this,
+      attributes: { ...this.attributes },
+      material: this.material.clone(),
+      targets: this.targets.map(target => target.clone()),
+    })
+  }
 }

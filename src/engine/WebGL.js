@@ -57,7 +57,7 @@ export class WebGL {
     return programs;
   }
 
-  static createTexture(gl, options) { //create and bind...
+  static createTexture(gl, options) {
     const target = options.target || gl.TEXTURE_2D;
     const iformat = options.iformat || gl.RGBA;
     const format = options.format || gl.RGBA;
@@ -71,7 +71,6 @@ export class WebGL {
     gl.bindTexture(target, texture);
 
     if (options.image) {
-      console.log(options.image)
       gl.texImage2D(
         target, 0, iformat,
         format, type, options.image);
@@ -83,22 +82,35 @@ export class WebGL {
         format, type, options.data);
     }
 
-    WebGL.setMipMaps(gl, target, options)
-
-    return texture;
-  }
-
-  static setMipMaps(gl, target, options) {
-    gl.generateMipmap(target);
+    //WebGL.setMipMaps(gl, target, texture, options);
     if (options.wrapS) { gl.texParameteri(target, gl.TEXTURE_WRAP_S, options.wrapS); }
     if (options.wrapT) { gl.texParameteri(target, gl.TEXTURE_WRAP_T, options.wrapT); }
     if (options.min) { gl.texParameteri(target, gl.TEXTURE_MIN_FILTER, options.min); }
     if (options.mag) { gl.texParameteri(target, gl.TEXTURE_MAG_FILTER, options.mag); }
+
+    gl.generateMipmap(target);
+
+    return texture;
+  }
+
+  static setMipMaps(gl, target, texture, options) {
+    if (typeof options.unit !== 'undefined') {
+      gl.activeTexture(gl.TEXTURE0 + options.unit);
+    }
+
+    gl.bindTexture(target, texture);
+
+    if (options.wrapS) { gl.texParameteri(target, gl.TEXTURE_WRAP_S, options.wrapS); }
+    if (options.wrapT) { gl.texParameteri(target, gl.TEXTURE_WRAP_T, options.wrapT); }
+    if (options.min) { gl.texParameteri(target, gl.TEXTURE_MIN_FILTER, options.min); }
+    if (options.mag) { gl.texParameteri(target, gl.TEXTURE_MAG_FILTER, options.mag); }
+
+    gl.generateMipmap(target);
   }
 
   static createBuffer(gl, options) {
     const target = options.target || gl.ARRAY_BUFFER;
-    const hint = options.hint || gl.STATIC_DRAW;
+    const hint = options.hint || gl.STATIC_DRAW; //gl.STREAM_DRAW; //gl.DYNAMIC_DRAW;
     const buffer = options.buffer || gl.createBuffer();
 
     gl.bindBuffer(target, buffer);

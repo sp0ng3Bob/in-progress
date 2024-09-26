@@ -1,26 +1,18 @@
-//import Primitive from './Primitive.js'
 export class Mesh {
 
   constructor(options = {}) {
     this.primitives = [...(options.primitives ?? [])]
     this.weights = [...(options.weights ?? [])]
+    this.transparentPrimitives = [...options.transparentPrimitives]
+    this.opaquePrimitives = [...options.opaquePrimitives]
   }
 
-  /*constructor(gltf, meshData, gl) {
-      this.gl = gl
-      this.primitives = []
-      this.name = meshData.name || ''
-
-      // Initialize each primitive
-      meshData.primitives.forEach(primitiveData => {
-          const primitive = new Primitive(gltf, primitiveData, gl)
-          this.primitives.push(primitive)
-      })
+  clone() {
+    return new Mesh({
+      primitives: this.primitives.map(primitive => primitive.clone()),
+      weights: [...this.weights],
+      transparentPrimitives: this.transparentPrimitives.map(primitive => primitive.clone()),
+      opaquePrimitives: this.opaquePrimitives.map(primitive => primitive.clone())
+    })
   }
-
-  draw(programInfo) {
-      this.primitives.forEach(primitive => {
-          primitive.draw(programInfo)
-      })
-  }*/
 }

@@ -10,12 +10,12 @@ export class Axes {
     this.program = options.program
 
     this.vertices = new Float32Array([
-      0.0, 0.0, 0.0, // Origin
-      1.0, 0.0, 0.0, // X-axis endpoint (red)
-      0.0, 0.0, 0.0, // Origin
-      0.0, 1.0, 0.0, // Y-axis endpoint (green)
-      0.0, 0.0, 0.0, // Origin
-      0.0, 0.0, 1.0  // Z-axis endpoint (blue)
+      0, 0, 0, // Origin
+      1, 0, 0, // X-axis endpoint (red)
+      0, 0, 0, // Origin
+      0, 1, 0, // Y-axis endpoint (green)
+      0, 0, 0, // Origin
+      0, 0, 1  // Z-axis endpoint (blue)
     ])
 
     this.colors = new Float32Array([

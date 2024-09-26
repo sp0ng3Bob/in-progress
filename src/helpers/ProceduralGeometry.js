@@ -1,27 +1,23 @@
 import { WebGL } from "../engine/WebGL.js"
 
 import {
-  getNormalisedRGB,
-  getUnsignedRGB,
   getPositionNormalised,
   getPositionString
 } from "./PointLight.js"
 
 import {
   updateMapping,
-  fetchImage,
-  setUVBuffer
+  fetchImage
 } from "./Textures.js"
+
+import * as BB from "./BoundingBox.js"
 
 import glMatrix from "glMatrix"
 
 const vec3 = glMatrix.vec3
 const mat4 = glMatrix.mat4
 const mat3 = glMatrix.mat3
-//const quat = glMatrix.quat
-
-//export const geometryObjects = [] // Initialize an array to store objects
-//const defaultSampler
+const quat = glMatrix.quat
 
 /* Private helpers */
 function enableAndSetUpVertexAttribute(gl, attribute, size, type) {
@@ -31,7 +27,7 @@ function enableAndSetUpVertexAttribute(gl, attribute, size, type) {
 
 function createAndBindBuffer(gl, data, attribute = undefined, target = undefined, usage = undefined) {
   target = target ?? gl.ARRAY_BUFFER
-  usage = usage ?? gl.STATIC_DRAW
+  usage = usage ?? gl.STATIC_DRAW //gl.STREAM_DRAW //gl.DYNAMIC_DRAW
 
   const buffer = gl.createBuffer()
   gl.bindBuffer(target, buffer)
@@ -42,6 +38,11 @@ function createAndBindBuffer(gl, data, attribute = undefined, target = undefined
     enableAndSetUpVertexAttribute(gl, ...Object.values(attribute))
   }
   return buffer
+}
+
+function updateBufferData(gl, data, buffer, usage = gl.DYNAMIC_DRAW) {
+  gl.bindBuffer(gl.ARRAY_BUFFER, buffer)
+  gl.bufferData(gl.ARRAY_BUFFER, data, usage)
 }
 
 async function prepareBuffers(gl, program, bufferData, color, textureImage, textureImageBlob) {
@@ -56,7 +57,12 @@ async function prepareBuffers(gl, program, bufferData, color, textureImage, text
   const uvBuffer = createAndBindBuffer(gl, uvs, { attr: program.attributes.aTexCoord, size: 2, type: gl.FLOAT })
 
   const texture = await setUpTexture(gl, textureImage, textureImageBlob)
-  const sampler = WebGL.createSampler(gl, { wrapS: gl.REPEAT, wrapT: gl.REPEAT, min: gl.NEAREST_MIPMAP_LINEAR, mag: gl.LINEAR })
+  const sampler = WebGL.createSampler(gl, {
+    wrapS: gl.REPEAT,
+    wrapT: gl.REPEAT,
+    min: gl.LINEAR_MIPMAP_LINEAR,
+    mag: gl.LINEAR
+  })
   const baseColor = color
 
   return {
@@ -74,30 +80,52 @@ async function prepareBuffers(gl, program, bufferData, color, textureImage, text
   }
 }
 
-function applyTransformations(positions, T, R) {
+async function updateBuffers(gl, model) {
+  gl.bindVertexArray(model.vao)
+
+  updateBufferData(gl, model.bufferData.positions, model.buffers.positions)
+  updateBufferData(gl, model.bufferData.normals, model.buffers.normals)
+  updateBufferData(gl, model.bufferData.indices, model.buffers.indices, gl.ELEMENT_ARRAY_BUFFER)
+  updateBufferData(gl, model.bufferData.uvs, model.buffers.uvs)
+
+  model.indexCount = model.bufferData.indices.length
+}
+
+function applyTransformations(pos, norm, T, R) {
   const transformMatrix = mat4.create()
   mat4.fromRotationTranslationScale(transformMatrix, R, T, [1, 1, 1])
 
+  const onlyRotateMatrix = mat4.create()
+  mat4.fromRotationTranslationScale(onlyRotateMatrix, R, [0, 0, 0], [1, 1, 1])
+
   const transformedPositions = []
-  for (let i = 0; i < positions.length; i += 3) {
-    const vertex = vec3.fromValues(positions[i], positions[i + 1], positions[i + 2])
+  const transformedNormals = []
+  for (let i = 0; i < pos.length; i += 3) {
+    const vertex = vec3.fromValues(pos[i], pos[i + 1], pos[i + 2])
     vec3.transformMat4(vertex, vertex, transformMatrix)
     transformedPositions.push(...vertex)
+
+    const normal = vec3.fromValues(norm[i], norm[i + 1], norm[i + 2])
+    vec3.transformMat4(normal, normal, onlyRotateMatrix)
+    transformedNormals.push(...normal)
   }
 
-  return new Float32Array(transformedPositions)
+  return {
+    positions: new Float32Array(transformedPositions),
+    normals: new Float32Array(transformedNormals)
+  }
 }
 
 function createPlaneGeometry(size = 1, position = [0, 0, 0], rotation = [0, 0, 0, 1]) {
   const halfSize = size / 2
-  let positions = new Float32Array([
+  const defaultPositions = new Float32Array([
     -halfSize, 0, halfSize,  // top-left
     halfSize, 0, halfSize,  // top-right
     halfSize, 0, -halfSize,  // bottom-right
     -halfSize, 0, -halfSize   // bottom-left
   ])
 
-  const normals = new Float32Array([
+  const defaultNormals = new Float32Array([
     0, 1, 0, // top-left normal
     0, 1, 0, // top-right normal
     0, 1, 0, // bottom-right normal
@@ -116,7 +144,7 @@ function createPlaneGeometry(size = 1, position = [0, 0, 0], rotation = [0, 0, 0
     0, 0  // bottom-left
   ])
 
-  positions = applyTransformations(positions, position, rotation)
+  const { positions, normals } = applyTransformations(defaultPositions, defaultNormals, position, rotation)
 
   return { positions, normals, indices, uvs }
 }
@@ -141,16 +169,16 @@ function createCubeGeometry(size = 1, position = [0, 0, 0], rotation = [0, 0, 0,
     [0, 0, 1, 0, 1, 1, 0, 1]  // Left
   ]
 
-  let positions = []
-  const normals = []
+  const defaultPositions = []
+  const defaultNormals = []
   const uvs = []
 
   faceDefinitions.forEach((face, faceIndex) => {
     for (let i = 0; i < 4; i++) {
-      const x = halfSize * face[3 * i] //+ position[0]
-      const y = halfSize * face[3 * i + 1] //+ position[1]
-      const z = halfSize * face[3 * i + 2] //+ position[2]
-      positions.push(x, y, z)
+      const x = halfSize * face[3 * i]
+      const y = halfSize * face[3 * i + 1]
+      const z = halfSize * face[3 * i + 2]
+      defaultPositions.push(x, y, z)
       uvs.push(faceUVs[faceIndex][2 * i], faceUVs[faceIndex][2 * i + 1])
     }
 
@@ -158,7 +186,7 @@ function createCubeGeometry(size = 1, position = [0, 0, 0], rotation = [0, 0, 0,
     normal[Math.floor(faceIndex / 2)] = faceIndex % 2 === 0 ? 1 : -1
 
     for (let i = 0; i < 4; i++) {
-      normals.push(...normal)
+      defaultNormals.push(...normal)
     }
   })
 
@@ -171,19 +199,19 @@ function createCubeGeometry(size = 1, position = [0, 0, 0], rotation = [0, 0, 0,
     20, 21, 22, 20, 22, 23  // left
   ])
 
-  positions = applyTransformations(positions, position, rotation)
+  const { positions, normals } = applyTransformations(defaultPositions, defaultNormals, position, rotation)
 
   return {
     positions,
-    normals: new Float32Array(normals),
+    normals,
     indices,
     uvs: new Float32Array(uvs)
   }
 }
 
 function createSphereGeometry(radius = 1, position = [0, 0, 0], rotation = [0, 0, 0, 1], latBands = 36, longBands = 36) {
-  let positions = []
-  const normals = []
+  const defaultPositions = []
+  const defaultNormals = []
   const indices = []
   const uvs = []
 
@@ -201,8 +229,8 @@ function createSphereGeometry(radius = 1, position = [0, 0, 0], rotation = [0, 0
       const y = cosTheta
       const z = sinPhi * sinTheta
 
-      positions.push(radius * x, radius * y, radius * z)
-      normals.push(x, y, z)
+      defaultPositions.push(radius * x, radius * y, radius * z)
+      defaultNormals.push(x, y, z)
       uvs.push(lon / longBands, 1 - lat / latBands)
 
       if (lat < latBands && lon < longBands) {
@@ -220,19 +248,19 @@ function createSphereGeometry(radius = 1, position = [0, 0, 0], rotation = [0, 0
     }
   }
 
-  positions = applyTransformations(positions, position, rotation)
+  const { positions, normals } = applyTransformations(defaultPositions, defaultNormals, position, rotation)
 
   return {
     positions,
-    normals: new Float32Array(normals),
+    normals,
     indices: new Uint16Array(indices),
     uvs: new Float32Array(uvs)
   }
 }
 
 function createTorusGeometry(outerRadius = 1, innerRadius = 0.4, position = [0, 0, 0], rotation = [0, 0, 0, 1], radialSegments = 36, tubularSegments = 36) {
-  let positions = []
-  const normals = []
+  const defaultPositions = []
+  const defaultNormals = []
   const indices = []
   const uvs = []
 
@@ -251,12 +279,12 @@ function createTorusGeometry(outerRadius = 1, innerRadius = 0.4, position = [0, 
       const x = (radius + innerRadius * cosPhi) * cosTheta
       const y = innerRadius * sinPhi
       const z = (radius + innerRadius * cosPhi) * sinTheta
-      positions.push(x, y, z)
+      defaultPositions.push(x, y, z)
 
       const nx = cosPhi * cosTheta
       const ny = sinPhi
       const nz = cosPhi * sinTheta
-      normals.push(nx, ny, nz)
+      defaultNormals.push(nx, ny, nz)
 
       uvs.push(j / radialSegments, i / tubularSegments)
 
@@ -271,58 +299,95 @@ function createTorusGeometry(outerRadius = 1, innerRadius = 0.4, position = [0, 
     }
   }
 
-  positions = applyTransformations(positions, position, rotation)
+  const { positions, normals } = applyTransformations(defaultPositions, defaultNormals, position, rotation)
 
   return {
     positions,
-    normals: new Float32Array(normals),
+    normals,
     indices: new Uint16Array(indices),
     uvs: new Float32Array(uvs)
   }
 }
 
 async function setUpTexture(gl, textureImage, textureImageBlob) {
-  if (textureImage != "") {
-    try {
-      if (textureImageBlob) {
-        const texture = WebGL.createTexture(gl, {
-          image: textureImageBlob,
-          mip: true,
-          wrapS: gl.REPEAT,
-          wrapT: gl.REPEAT,
-          min: gl.NEAREST_MIPMAP_LINEAR,
-          mag: gl.LINEAR,
-        })
+  if (textureImage === "") { return undefined }
 
-        return texture
-      } else {
-        const url = new URL(textureImage, window.location)
-        const image = await fetchImage(url)
-        const texture = WebGL.createTexture(gl, {
-          image,
-          mip: true,
-          wrapS: gl.REPEAT,
-          wrapT: gl.REPEAT,
-          min: gl.NEAREST_MIPMAP_LINEAR,
-          mag: gl.LINEAR,
-        })
-
-        return texture
-      }
-
-    } catch (error) {
-      console.error('Error loading image:', error)
-      return undefined
+  try {
+    let texture
+    if (textureImageBlob) {
+      texture = WebGL.createTexture(gl, {
+        image: textureImageBlob,
+        unit: 0,
+        wrapS: gl.REPEAT,
+        wrapT: gl.REPEAT,
+        min: gl.LINEAR_MIPMAP_LINEAR,
+        mag: gl.LINEAR
+      })
+    } else {
+      const url = new URL(textureImage, window.location)
+      const image = await fetchImage(url)
+      texture = WebGL.createTexture(gl, {
+        image,
+        unit: 0,
+        wrapS: gl.REPEAT,
+        wrapT: gl.REPEAT,
+        min: gl.LINEAR_MIPMAP_LINEAR,
+        mag: gl.LINEAR
+      })
     }
+    return texture
+  } catch (error) {
+    console.error('Error loading image:', error)
+    return undefined
   }
-  return undefined
+}
+
+
+export function resetSampler(gl, model) {
+  /*gl.bindTexture(gl.TEXTURE_2D, model.texture)
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.REPEAT)
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.REPEAT)
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR)
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR)*/
+
+  /*WebGL.setMipMaps(gl, gl.TEXTURE_2D, model.texture, {
+    unit: 0,
+    wrapS: gl.REPEAT,
+    wrapT: gl.REPEAT,
+    min: gl.NEAREST_MIPMAP_NEAREST,
+    mag: gl.NEAREST
+  })*/
+
+  gl.samplerParameteri(model.sampler, gl.TEXTURE_WRAP_S, gl.REPEAT)
+  gl.samplerParameteri(model.sampler, gl.TEXTURE_WRAP_T, gl.REPEAT)
+  gl.samplerParameteri(model.sampler, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR)
+  gl.samplerParameteri(model.sampler, gl.TEXTURE_MAG_FILTER, gl.LINEAR)
+
+  //model.texture = 
+  //generateMipmaps(gl, model.texture)
+}
+
+export function generateMipmaps(gl, texture) {
+  WebGL.setMipMaps(gl, gl.TEXTURE_2D, texture, { unit: 0 })
+
+  //gl.bindTexture(gl.TEXTURE_2D, texture)
+  //gl.generateMipmap(gl.TEXTURE_2D)
 }
 /* ----- */
 
 export async function createPlane(gl, program, options) {
   const bufferData = createPlaneGeometry(options.size, options.position, options.rotation)
+
+  if (options.textureMappingsFromUser) {
+    if (options.textureMappingsFromUser.length / 2 === bufferData.positions / 3) {
+      bufferData.uvs = new Float32Array(options.textureMappingsFromUser)
+    } else {
+      console.error(`Invalid number of texture mappings provided. Expected ${bufferData.positions / 3} (U,V) pairs, but supplied only ${options.textureMappingsFromUser.length / 2}.`)
+    }
+  }
   bufferData.defaultUVs = bufferData.uvs.slice(0)
-  updateMapping(bufferData, options.textureMappings)
+  updateMapping(bufferData, options.textureMappings, "Plane")
+
   const outModel = await prepareBuffers(gl, program, bufferData, options.material.color, options.texture, options.textureBlob)
   outModel.type = "Plane"
   outModel.bufferData = bufferData
@@ -341,13 +406,34 @@ export async function createPlane(gl, program, options) {
     specularColor: options.material.specularColor,
     shininess: options.material.shininess
   }
+
+  const minMax = BB.calculate(bufferData.positions)
+  const bb = {
+    x: (minMax.max.x - minMax.min.x).toFixed(3),
+    y: (minMax.max.y - minMax.min.y).toFixed(3),
+    z: (minMax.max.z - minMax.min.z).toFixed(3)
+  }
+  outModel.info = {
+    numberOfVertices: bufferData.positions.length / 3,
+    numberOfIndices: outModel.indexCount / 3,
+    boundingBox: `x: ${bb.x} | y: ${bb.y} | z: ${bb.z}`
+  }
   return outModel
 }
 
 export async function createCube(gl, program, options) {
   const bufferData = createCubeGeometry(options.size, options.position, options.rotation)
+
+  if (options.textureMappingsFromUser) {
+    if (options.textureMappingsFromUser.length / 2 === bufferData.positions / 3) {
+      bufferData.uvs = new Float32Array(options.textureMappingsFromUser)
+    } else {
+      console.error(`Invalid number of texture mappings provided. Expected ${bufferData.positions / 3} (U,V) pairs, but supplied only ${options.textureMappingsFromUser.length / 2}.`)
+    }
+  }
   bufferData.defaultUVs = bufferData.uvs.slice(0)
-  updateMapping(bufferData, options.textureMappings)
+  updateMapping(bufferData, options.textureMappings, "Cube")
+
   const outModel = await prepareBuffers(gl, program, bufferData, options.material.color, options.texture, options.textureBlob)
   outModel.type = "Cube"
   outModel.bufferData = bufferData
@@ -366,13 +452,34 @@ export async function createCube(gl, program, options) {
     specularColor: options.material.specularColor,
     shininess: options.material.shininess
   }
+
+  const minMax = BB.calculate(bufferData.positions)
+  const bb = {
+    x: (minMax.max.x - minMax.min.x).toFixed(3),
+    y: (minMax.max.y - minMax.min.y).toFixed(3),
+    z: (minMax.max.z - minMax.min.z).toFixed(3)
+  }
+  outModel.info = {
+    numberOfVertices: bufferData.positions.length / 3,
+    numberOfIndices: outModel.indexCount / 3,
+    boundingBox: `x: ${bb.x} | y: ${bb.y} | z: ${bb.z}`
+  }
   return outModel
 }
 
 export async function createSphere(gl, program, options) {
   const bufferData = createSphereGeometry(options.radius, options.position, options.rotation, options.latBands, options.lonBands)
+
+  if (options.textureMappingsFromUser) {
+    if (options.textureMappingsFromUser.length / 2 === bufferData.positions / 3) {
+      bufferData.uvs = new Float32Array(options.textureMappingsFromUser)
+    } else {
+      console.error(`Invalid number of texture mappings provided. Expected ${bufferData.positions / 3} (U,V) pairs, but supplied only ${options.textureMappingsFromUser.length / 2}.`)
+    }
+  }
   bufferData.defaultUVs = bufferData.uvs.slice(0)
-  updateMapping(bufferData, options.textureMappings)
+  updateMapping(bufferData, options.textureMappings, "Sphere")
+
   const outModel = await prepareBuffers(gl, program, bufferData, options.material.color, options.texture, options.textureBlob)
   outModel.type = "Sphere"
   outModel.bufferData = bufferData
@@ -393,13 +500,34 @@ export async function createSphere(gl, program, options) {
     specularColor: options.material.specularColor,
     shininess: options.material.shininess
   }
+
+  const minMax = BB.calculate(bufferData.positions)
+  const bb = {
+    x: (minMax.max.x - minMax.min.x).toFixed(3),
+    y: (minMax.max.y - minMax.min.y).toFixed(3),
+    z: (minMax.max.z - minMax.min.z).toFixed(3)
+  }
+  outModel.info = {
+    numberOfVertices: bufferData.positions.length / 3,
+    numberOfIndices: outModel.indexCount,
+    boundingBox: `x: ${bb.x} | y: ${bb.y} | z: ${bb.z}`
+  }
   return outModel
 }
 
 export async function createTorus(gl, program, options) {
   const bufferData = createTorusGeometry(options.radius, options.holeRadius, options.position, options.rotation, options.radialSegments, options.tubularSegments)
+
+  if (options.textureMappingsFromUser) {
+    if (options.textureMappingsFromUser.length / 2 === bufferData.positions / 3) {
+      bufferData.uvs = new Float32Array(options.textureMappingsFromUser)
+    } else {
+      console.error(`Invalid number of texture mappings provided. Expected ${bufferData.positions / 3} (U,V) pairs, but supplied only ${options.textureMappingsFromUser.length / 2}.`)
+    }
+  }
   bufferData.defaultUVs = bufferData.uvs.slice(0)
-  updateMapping(bufferData, options.textureMappings)
+  updateMapping(bufferData, options.textureMappings, "Torus")
+
   const outModel = await prepareBuffers(gl, program, bufferData, options.material.color, options.texture, options.textureBlob)
   outModel.type = "Torus"
   outModel.bufferData = bufferData
@@ -421,35 +549,51 @@ export async function createTorus(gl, program, options) {
     specularColor: options.material.specularColor,
     shininess: options.material.shininess
   }
+
+  const minMax = BB.calculate(bufferData.positions)
+  const bb = {
+    x: (minMax.max.x - minMax.min.x).toFixed(3),
+    y: (minMax.max.y - minMax.min.y).toFixed(3),
+    z: (minMax.max.z - minMax.min.z).toFixed(3)
+  }
+  outModel.info = {
+    numberOfVertices: bufferData.positions.length / 3,
+    numberOfIndices: outModel.indexCount / 3,
+    boundingBox: `x: ${bb.x} | y: ${bb.y} | z: ${bb.z}`
+  }
   return outModel
 }
 
-export async function updateGeoBuffers(gl, program, model) {
-  let bufferData
-
+export async function updateGeoBuffers(gl, model) {
   switch (model.type) {
     case "Plane":
-      bufferData = createPlaneGeometry(model.geometry.size, getPositionNormalised(model.geometry.position), getPositionNormalised(model.geometry.rotation))
+      model.bufferData = createPlaneGeometry(model.geometry.size, getPositionNormalised(model.geometry.position), getPositionNormalised(model.geometry.rotation))
       break
     case "Cube":
-      bufferData = createCubeGeometry(model.geometry.size, getPositionNormalised(model.geometry.position), getPositionNormalised(model.geometry.rotation))
+      model.bufferData = createCubeGeometry(model.geometry.size, getPositionNormalised(model.geometry.position), getPositionNormalised(model.geometry.rotation))
       break
     case "Sphere":
-      bufferData = createSphereGeometry(model.geometry.size, getPositionNormalised(model.geometry.position), getPositionNormalised(model.geometry.rotation), model.geometry.lat, model.geometry.lon)
+      model.bufferData = createSphereGeometry(model.geometry.size, getPositionNormalised(model.geometry.position), getPositionNormalised(model.geometry.rotation), model.geometry.lat, model.geometry.lon)
       break
     case "Torus":
-      bufferData = createTorusGeometry(model.geometry.size, model.geometry.innerHole, getPositionNormalised(model.geometry.position), getPositionNormalised(model.geometry.rotation), model.geometry.lat, model.geometry.lon)
+      model.bufferData = createTorusGeometry(model.geometry.size, model.geometry.innerHole, getPositionNormalised(model.geometry.position), getPositionNormalised(model.geometry.rotation), model.geometry.lat, model.geometry.lon)
       break
     default:
       console.error("Unknown model type")
       return
   }
 
+  await updateBuffers(gl, model)
 
-  const newModel = await prepareBuffers(gl, program, bufferData, model.baseColor, "")
-
-  model.vao = newModel.vao
-  model.indexCount = newModel.indexCount
+  const minMax = BB.calculate(model.bufferData.positions)
+  const bb = {
+    x: (minMax.max.x - minMax.min.x).toFixed(3),
+    y: (minMax.max.y - minMax.min.y).toFixed(3),
+    z: (minMax.max.z - minMax.min.z).toFixed(3)
+  }
+  model.info.numberOfVertices = model.bufferData.positions.length / 3
+  model.info.numberOfIndices = model.indexCount / 3
+  model.info.boundingBox = `x: ${bb.x} | y: ${bb.y} | z: ${bb.z}`
 }
 
 export async function updateGeoTexture(gl, model) {
@@ -458,9 +602,19 @@ export async function updateGeoTexture(gl, model) {
   model.texture = newTex
 }
 
-export async function updateGeoTextureMapping(gl, program, model) {
-  updateMapping(model.bufferData, model.texturing.textureMappings)
+export async function updateGeoTextureMapping(gl, model) {
+  updateMapping(model.bufferData, model.texturing.textureMappings, model.type)
   gl.bindVertexArray(model.vao)
-  //setUVBuffer(gl, model.buffers.uvs, model.bufferData.uvs)
-  model.buffers.uvs = createAndBindBuffer(gl, model.bufferData.uvs, { attr: program.attributes.aTexCoord, size: 2, type: gl.FLOAT })
+
+  if (model.texturing.textureMappings.mapping === "From a local file" && model.texturing.textureMappingsFromUser) {
+    if (model.texturing.textureMappingsFromUser.length / 2 === model.bufferData.positions / 3) {
+      model.bufferData.uvs = new Float32Array(model.texturing.textureMappingsFromUser)
+      updateBufferData(gl, model.bufferData.uvs, model.buffers.uvs)
+    } else {
+      console.error(`Invalid number of texture mappings provided. Expected ${model.bufferData.positions / 3} (U,V) pairs, but supplied only ${model.texturing.textureMappingsFromUser.length / 2}.`)
+      updateBufferData(gl, model.bufferData.defaultUVs, model.buffers.uvs)
+    }
+  } else {
+    updateBufferData(gl, model.bufferData.uvs, model.buffers.uvs)
+  }
 }

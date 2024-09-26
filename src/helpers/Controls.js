@@ -15,26 +15,20 @@ export class Controls {
     this.initialPinchDistance = null
     this.lastPinchDistance = null
     this.lastTapTime = 0
-    this.doubleTapZoomOutFactor = 1.5
+    this.doubleTapZoomFactor = 1.5
     this.onTouchDevice = window.matchMedia("(pointer: coarse)").matches
 
-    this.rotationQuat = quat.create() // Initialize a quaternion for cameras rotation
-    this.positionVec = vec3.create()
     this.orbitCenter = vec3.create()
-
-    this.phi = Math.PI / 2 //0 to Math.PI -- colatitude: 0 = north -> PI = south
-    this.theta = Math.PI //to 2*Math.PI -- longitude: around the equator
-    this.phiIncrement = 0 //.01
-    this.thetaIncrement = 0.5 //1
 
     this.camera = undefined
   }
 
   updateCamera(camera) {
     this.camera = camera
+    this.updateOrbitCenter(camera.lookingAt)
   }
 
-  setOrbitCenter(center) {
+  updateOrbitCenter(center) {
     vec3.copy(this.orbitCenter, center)
   }
 
@@ -62,15 +56,15 @@ export class Controls {
 
     // Calculate the direction vector
     const direction = vec3.create()
-    vec3.subtract(direction, this.orbitCenter, this.camera.translation)
+    vec3.subtract(direction, this.camera.lookingAt, this.camera.translation)
 
     // Normalize the direction vector
     vec3.normalize(direction, direction)
     return direction
   }
 
-  zoomOut() {
-    const zoomSpeed = 0.1 // Adjust the zoom speed as needed
+  /*zoomOut() {
+    const zoomSpeed = 0.1
     const direction = this.calculateCameraDirection()
 
     const sign = this.camera.translation[2] < 0 ? -1 : 1
@@ -79,7 +73,7 @@ export class Controls {
     this.camera.translation[2] += direction[2] * zoomSpeed * this.zoomFactor * sign
 
     this.camera.updateMatrix()
-  }
+  }*/
 
   onDragStart(e) {
     if (this.onTouchDevice && e?.touches?.length !== 1) return
@@ -87,10 +81,10 @@ export class Controls {
     const currentTime = new Date().getTime()
     const tapGap = currentTime - this.lastTapTime
 
-    if (tapGap > 0 && tapGap < 300) {
+    /*if (tapGap > 0 && tapGap < 300) {
       this.zoomOut()
       return //???
-    }
+    }*/
 
     this.lastTapTime = currentTime
 
@@ -104,9 +98,6 @@ export class Controls {
     const x = this.onTouchDevice ? e.touches[0].clientX : e.clientX
     const y = this.onTouchDevice ? e.touches[0].clientY : e.clientY
     this.startPosition = { x, y }
-
-    // Reset the rotation quaternion when dragging starts
-    quat.identity(this.rotationQuat)
   }
 
   onDrag(e) {
@@ -137,12 +128,11 @@ export class Controls {
   }
 
   setZoom(zoom) {
-    //this.zoomFactor = Math.PI / 180 * zoom
+    this.zoomFactor = Math.PI / 180 * zoom
   }
 
-  //processZoomOnMobile(e)
-
   processScrollWheel(e) {
+    e.preventDefault()
     let zoomSpeed = 0.01
     if (e.shiftKey) { zoomSpeed = 0.1 }
 
@@ -158,10 +148,10 @@ export class Controls {
       if (this.initialPinchDistance) {
         const pinchDelta = distance - this.lastPinchDistance
 
-        if (Math.abs(this.camera.translation[2] + pinchDelta * zoomSpeed * this.zoomFactor) > 0.01) {
+        /*if (Math.abs(this.camera.translation[2] + pinchDelta * zoomSpeed * this.zoomFactor) > 0.01) {
           this.camera.translation[2] += pinchDelta * zoomSpeed * this.zoomFactor
           this.camera.updateMatrix()
-        }
+        }*/
 
         this.lastPinchDistance = distance
       } else {
@@ -170,11 +160,14 @@ export class Controls {
       }
     } else {
       const direction = this.calculateCameraDirection()
+      const signX = this.camera.translation[0] < 0 ? -1 : 1
+      const signY = this.camera.translation[1] < 0 ? -1 : 1
+      const signZ = this.camera.translation[2] < 0 ? -1 : 1
+      const deltaY = zoomSpeed * this.zoomFactor * e.wheelDeltaY
 
-      const sign = this.camera.translation[2] < 0 ? -1 : 1
-      this.camera.translation[0] += direction[0] * zoomSpeed * this.zoomFactor * e.deltaY * sign
-      this.camera.translation[1] += direction[1] * zoomSpeed * this.zoomFactor * e.deltaY * sign
-      this.camera.translation[2] += direction[2] * zoomSpeed * this.zoomFactor * e.deltaY * sign
+      this.camera.translation[0] += direction[0] * deltaY //* signX
+      this.camera.translation[1] += direction[1] * deltaY //* signY
+      this.camera.translation[2] += direction[2] * deltaY //* signZ
 
       this.camera.updateMatrix()
     }
@@ -185,6 +178,7 @@ export class Controls {
   processKeyboardInput(e) {
     switch (e.code) {
       case "KeyA":
+        //this.pan(undefined, 0, (e.shiftKey ? 10 : 1) * this.zoomFactor)
         this.camera.translation[0] += (e.shiftKey ? 10 : 1) * this.zoomFactor
         break
       case "KeyD":
@@ -199,16 +193,16 @@ export class Controls {
 
       //Orbital rotation
       case "ArrowUp": //Rotate camera up
-        this.rotateCameraAroundModel((e.shiftKey ? 10 : 1) * -this.zoomFactor, 0)
+        this.rotate(undefined, (e.shiftKey ? 10 : 1) * -this.zoomFactor, 0)
         break
       case "ArrowDown": //Rotate camera down
-        this.rotateCameraAroundModel((e.shiftKey ? 10 : 1) * this.zoomFactor, 0)
+        this.rotate(undefined, (e.shiftKey ? 10 : 1) * this.zoomFactor, 0)
         break
       case "ArrowLeft": //Rotate camera left
-        this.rotateCameraAroundModel(0, (e.shiftKey ? 10 : 1) * -this.zoomFactor)
+        this.rotate(undefined, 0, (e.shiftKey ? 10 : 1) * -this.zoomFactor)
         break
       case "ArrowRight": //Rotate camera right
-        this.rotateCameraAroundModel(0, (e.shiftKey ? 10 : 1) * this.zoomFactor)
+        this.rotate(undefined, 0, (e.shiftKey ? 10 : 1) * this.zoomFactor)
         break
       default:
         return
@@ -216,75 +210,11 @@ export class Controls {
     this.camera.updateMatrix()
   }
 
-  rotateCameraAroundModel(theta, phi) { //theta == X, phi == Y
-    if (!this.camera) return
-
-    const rotationQuatX = quat.create()
-    const rotationQuatY = quat.create()
-    quat.rotateX(rotationQuatX, rotationQuatX, theta)
-    quat.rotateY(rotationQuatY, rotationQuatY, phi)
-    const combinedRotation = quat.create()
-    quat.mul(combinedRotation, rotationQuatY, rotationQuatX)
-
-    // Calculate the new camera position
-    const cameraPosition = vec3.subtract(vec3.create(), this.camera.translation, this.orbitCenter)
-    vec3.transformQuat(cameraPosition, cameraPosition, combinedRotation)
-    vec3.add(this.camera.translation, this.orbitCenter, cameraPosition)
-
-    // Update camera rotation
-    quat.mul(this.camera.rotation, combinedRotation, this.camera.rotation)
-
-    this.camera.updateMatrix()
-  }
-
   /* UTILS */
-  rotateCamera(translate) { //more like move camera
-    /*let rotationQuaternion = quat.create()
-    quat.fromEuler(rotationQuaternion, 0, 0.3, 0) 
-    quat.multiply(camera.rotation, rotationQuaternion, camera.rotation)
-    camera.updateMatrix()*/
-
-    this.phi = (this.phi + this.phiIncrement) % Math.PI
-    this.theta = (this.theta + this.thetaIncrement) % Math.PI * 2
-
-    //const newX = camera.lookingAt[0] + camera.translation[0] * Math.sin(this.phi) * Math.cos(this.theta)
-    //const newY = camera.lookingAt[1] + camera.translation[1] * Math.sin(this.phi) * Math.sin(this.theta)
-    //const newZ = camera.lookingAt[2] + camera.translation[2] * Math.cos(this.phi)
-    const newX = 0 + 0.1 * Math.sin(this.phi) * Math.cos(this.theta)
-    const newY = 0 + 0.1 * Math.sin(this.phi) * Math.sin(this.theta)
-    const newZ = 0 + 0.2 * Math.cos(this.phi)
-
-    //camera.translation = new Float32Array([newX,newY,newZ])
-    this.camera.translation[0] = newX
-    this.camera.translation[1] = newY
-    this.camera.translation[2] = newZ //* 10
-
-    console.log(this.camera.translation, this.phi, this.theta)
-
-    const eye = this.camera.translation
-    //eye[2] *= 3
-    //rotate cameras' eye to the looking point
-    const vm = mat4.create()
-    mat4.lookAt(vm, eye, this.camera.lookingAt, [0, 1, 0])
-    //camera.matrix = vm 
-    //camera.camera.matrix = vm
-    let rotationMatrix = mat4.create()
-    mat4.invert(rotationMatrix, vm)
-    mat4.transpose(rotationMatrix, rotationMatrix)
-
-    // Convert the rotation matrix to a quaternion
-    let quaternion = quat.create()
-    quat.fromMat3(quaternion, rotationMatrix)
-    //quat.fromMat3(quaternion, vm)
-    this.camera.rotation = quaternion
-
-    this.camera.updateMatrix()
-  }
-
   rotate(e, deltaX, deltaY) {
     if (!this.camera) return
 
-    const rotationSpeed = (Math.PI / 180) * (e?.shiftKey ? 3 : 1) * this.zoomFactor
+    const rotationSpeed = (e?.shiftKey ? 3 : 1) * this.zoomFactor * (Math.PI / 180)
     const rotationQuat = quat.create()
     quat.rotateX(rotationQuat, rotationQuat, deltaY * rotationSpeed) // IS THIS RIGHT, OR AM I MISSING SOMETHING?
     quat.invert(rotationQuat, rotationQuat)
@@ -309,7 +239,7 @@ export class Controls {
   pan(e, deltaX, deltaY) {
     if (!this.camera) return
 
-    const panSpeed = (e.shiftKey ? 2 : 0.5) * this.zoomFactor
+    const panSpeed = (e?.shiftKey ? 2 : 0.5) * this.zoomFactor
     const right = vec3.create()
     const up = vec3.create()
 
@@ -354,26 +284,5 @@ export class Controls {
 
     // Convert to degrees
     return euler.map(angle => angle * (180 / Math.PI))
-    /*const w = quat[3]
-    const x = quat[0]
-    const y = quat[1]
-    const z = quat[2]
-
-    const wx = w * x,
-      wy = w * y,
-      wz = w * z
-    const xx = x * x,
-      xy = x * y,
-      xz = x * z
-    const yy = y * y,
-      yz = y * z,
-      zz = z * z
-
-    const xyz = [
-      -Math.atan2(2 * (yz - wx), 1 - 2 * (xx + yy)),
-      Math.asin(2 * (xz + wy)),
-      -Math.atan2(2 * (xy - wz), 1 - 2 * (yy + zz)),
-    ]
-    return xyz.map((x) => (x * 180) / Math.PI)*/
   }
 }

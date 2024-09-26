@@ -423,7 +423,7 @@ export class GLTFLoader {
       return this.cache.get(gltfSpec)
     }
 
-    const options = { primitives: [] }
+    const options = { primitives: [], opaquePrimitives: [], transparentPrimitives: [] }
     for (const primitiveSpec of gltfSpec.primitives) {
       const primitiveOptions = { attributes: {} }
       for (const name in primitiveSpec.attributes) {
@@ -450,6 +450,12 @@ export class GLTFLoader {
 
       const primitive = new Primitive(primitiveOptions)
       options.primitives.push(primitive)
+
+      if (primitiveOptions?.material?.alphaMode === "BLEND") {
+        options.transparentPrimitives.push(primitive) //(primitive.clone())
+      } else {
+        options.opaquePrimitives.push(primitive) //(primitive.clone())
+      }
     }
 
     if (gltfSpec.weights) {
@@ -517,15 +523,7 @@ export class GLTFLoader {
     if (gltfSpec.mesh !== undefined) {
       options.mesh = await this.loadMesh(gltfSpec.mesh)
 
-      /*options.transparrentPrimitives = []
-      options.opaquePrimitives = []
-      for (let primitive of options.mesh.primitives) {
-        if (primitive.material.alphaMode === "BLEND") {
-          options.transparrentPrimitives.push(primitive)
-        } else {
 
-        }
-      }*/
     }
 
     if (gltfSpec.skin !== undefined) {
@@ -554,6 +552,15 @@ export class GLTFLoader {
         const node = await this.loadNode(nodeIndex)
         options.nodes.push(node)
       }
+
+      /*options.transparentNodes = []
+      options.nodes.forEach(node => options.transparentNodes.push(node.clone()))
+
+      options.opaqueNodes = []
+      options.nodes.forEach(node => options.opaqueNodes.push(node.clone()))
+
+      this.sortDrawablePrimitives(true, options.transparentNodes)
+      this.sortDrawablePrimitives(false, options.opaqueNodes)*/
     }
 
     if (this.gltf.animations) {
@@ -567,6 +574,38 @@ export class GLTFLoader {
     const scene = new Scene(options)
     this.cache.set(gltfSpec, scene)
     return scene
+  }
+
+  sortDrawablePrimitives(mode, nodes) {
+    for (let node = nodes.length - 1; node >= 0; node--) {
+      if (!nodes[node].mesh && mode) {
+        this.sortDrawablePrimitives(mode, nodes[node].children)
+        //nodes.splice(Number(node), 1)
+      } else {
+        for (let primitive = nodes[node].mesh.primitives.length - 1; primitive >= 0; primitive--) {
+          if ((nodes[node].mesh.primitives[primitive].material.alphaMode === "BLEND") == mode) {
+            nodes[node].mesh.primitives.splice(Number(primitive), 1)
+          }
+        }
+        /*if (nodes[node].mesh) {
+          // Remove the node if its primitives arrays are empty
+          /*if (options.transparentNodes[node].mesh.primitives.length === 0) {
+            options.transparentNodes.splice(Number(node), 1);
+          }
+          if (options.opaqueNodes[node].mesh.primitives.length === 0) {
+            options.opaqueNodes.splice(Number(node), 1);
+          }*/
+        /*  let a = 5
+        } else {
+          options.transparentNodes.splice(Number(node), 1)
+        }*/
+        this.sortDrawablePrimitives(mode, nodes[node].children)
+      }
+
+      //if (nodes[node].children.length > 0) {
+      //  this.sortDrawablePrimitives(mode, nodes[node].children)
+      //}
+    }
   }
 
   async loadSkin(nameOrIndex) {

@@ -21,9 +21,7 @@ export class Node {
       : mat4.create()
 
     if (options.matrix) {
-      mat4.getRotation(this.rotation, this.matrix)
-      mat4.getTranslation(this.translation, this.matrix)
-      mat4.getScaling(this.scale, this.matrix)
+      this.updateTRS()
     } else if (options.translation || options.rotation || options.scale) {
       this.updateMatrix()
     }
@@ -38,21 +36,20 @@ export class Node {
       child.parent = this
     }
     this.parent = null
-
-    //this.hasTransparentProperties = options.transparent || false
-    this.transparrentPrimitives = [...(options.transparrentPrimitives ?? [])]
-    this.opaquePrimitives = [...(options.opaquePrimitives ?? [])]
   }
 
   updateMatrix() {
-    /*for (const childNode of this.children ?? []) {
-      childNode.updateMatrix()
-    }*/
     mat4.fromRotationTranslationScale(
       this.matrix,
       this.rotation,
       this.translation,
       this.scale)
+  }
+
+  updateTRS() {
+    mat4.getRotation(this.rotation, this.matrix)
+    mat4.getTranslation(this.translation, this.matrix)
+    mat4.getScaling(this.scale, this.matrix)
   }
 
   addChild(node) {
@@ -71,8 +68,8 @@ export class Node {
   clone() {
     return new Node({
       ...this,
+      mesh: this.mesh ? this.mesh.clone() : null,
       children: this.children.map(child => child.clone()),
     })
   }
-
 }

@@ -11,7 +11,7 @@ export class FileInput {
     return fileName.split(".").pop().toLowerCase()
   }
 
-  // Function to read file as text (for .gltf)
+  // Function to read file as text (for .txt and .gltf)
   async readFileAsText(file) {
     return new Promise((resolve, reject) => {
       const reader = new FileReader()
@@ -61,7 +61,7 @@ export class FileInput {
           let fileData = { file, data: undefined, type: fileExtension }
 
           try {
-            if (fileExtension === "gltf") {
+            if (["txt", "gltf"].includes(fileExtension)) {
               fileData.data = await this.readFileAsText(file)
             } else if (fileExtension === "glb") {
               fileData.data = await this.readFileAsArrayBuffer(file)

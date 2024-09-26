@@ -11,11 +11,11 @@ document.addEventListener("DOMContentLoaded", async () => {
   // Listeners
   document.addEventListener("resize", app.resize)
 
-  canvas.addEventListener("keydown", (e) => { // add listener to document to make it work
+  /*document.addEventListener("keydown", (e) => { // add listener to document to make it work
     if (app.freeCamera == app.state.selectedCamera || forAllCameras) {
-      app.controls.processKeyboardInput(e, app.camera)
+      app.controls.processKeyboardInput(e)
     }
-  })
+  })*/
 
   canvas.addEventListener("wheel", e => {
     if (app.freeCamera == app.state.selectedCamera || forAllCameras) {

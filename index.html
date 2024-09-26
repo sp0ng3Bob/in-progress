@@ -21,7 +21,7 @@
 	CAMERA CONTROLS: -> CAMERAS
 	(5) Allow camera position and rotation control using mouse or keyboard input, 
 	with the ability to change the camera's focal point. 
-    Q- orbit around the model not working as it should - in my oppinion lol (ONLY WORKS WITH THE PREDEFINED glTF MODEL'S CAMERA ??)
+    Q- DONE
 
 	LIGHTS: -> LIGHTS
 	(6) Place point lights in the scene, with adjustable parameters for color, 
@@ -31,11 +31,11 @@
 	(diffuse and specular color, shininess) for each object. 
     A- Pri izbiri osvetlitvenega modela je bilo mišljeno določanje parametrov Lambertovega in Phongovega modela. Pod to spada
     tudi vklop/izklop Lambertovega oz. Phongovega modela.
-    Q- NOT-WORKING FRAGMENT SHADER!
+    Q- DONE
 
 	FRAGMENT SHADER: ->
 	(8) Implement per-fragment lighting and shading calculations. 
-    Q- NOT WORKING YET!
+    Q- DONE
 
 	TEXTURES: -> MODEL.TEXTURES & PROCEDURAL GEOMETRY
 	(9) Assign textures to each object individually, with options for 
@@ -44,13 +44,14 @@
 	scaling, and projection direction for UV coordinates. 
     A- Pri določanju teksture je mišljena le osnovna (difuzna) tekstura. Uporabe drugih tekstur navodila ne predvidevajo.
     Določanje tekstur naj bo omogočeno tudi za GLTF modele.
-    Q- manjka projection direction, drugo ne dela in nisem siguren zakaj ne.
+    Q- PROJECTION DIRECTION, UVs FROM FILE MISSING
 
 	GLOBALS:
 	(10) Provide a global setting to control texture wrapping modes (CLAMP_TO_EDGE, REPEAT, MIRRORED_REPEAT).
 	(11) Provide a global setting to control texture filtering modes (NEAREST, LINEAR) and mipmapping options.
 	(12) Allow global enabling and disabling of mipmaps.
     A- Globalno spreminjanje vzorčenja in filtriranja naj deluje na vse modele v sceni.
+    Q- NOT-DONE
 -->
 
 <!-- https://webgl2fundamentals.org/webgl/lessons/resources/webgl-state-diagram.html -->
@@ -62,7 +63,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-  <title>90 - Loading glTF files - ES6/WebGL 2.0 Examples</title>
+  <title>TITLE_GOES_HERE</title>
 
   <link rel="stylesheet" type="text/css" href="./src/styles/style.css">
 
@@ -131,9 +132,7 @@
     </form>
   </dialog>
 
-
-  <input type="file" id="localFileChooser" accept=".png, .jpg, .jpeg, .gltf, .glb" style="display:none;">
-  <!-- <img id="image" alt="Local file chooser for loading textures or gltf models" style="display:none;"> -->
+  <input type="file" id="localFileChooser" accept=".txt, .png, .jpg, .jpeg, .gltf, .glb" style="display: none;">
 </body>
 
 </html>

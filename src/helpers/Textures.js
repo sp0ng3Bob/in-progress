@@ -122,11 +122,6 @@ function rotateUVs(uvs, angle) {
   return uvs
 }
 
-export function setUVBuffer(gl, model, newUVs) {
-  gl.bindBuffer(gl.ARRAY_BUFFER, model.uvs)
-  gl.bufferData(gl.ARRAY_BUFFER, newUVs, gl.STATIC_DRAW)
-}
-
 /* READ THIS:
   - https://webgl2fundamentals.org/webgl/lessons/webgl-3d-textures.html
   - https://webgl2fundamentals.org/webgl/lessons/webgl-3d-perspective-correct-texturemapping.html
@@ -148,7 +143,7 @@ export function setUVBuffer(gl, model, newUVs) {
   glTexImage2D() or glTexSubImage2D(), you have to call glGenerateMipmap() again. ]
 
 */
-export function updateMapping(bufferData, options) {
+export function updateMapping(bufferData, options, type) {
   if (!options?.mapping) { return }
 
   if (options.mapping === "Planar") {
@@ -158,7 +153,8 @@ export function updateMapping(bufferData, options) {
   } else if (options.mapping === "Spherical") {
     bufferData.uvs = updateUVs(calculateSphericalMapping(bufferData.positions, options.projectionDirection), options)
   } else {
-    bufferData.uvs = updateUVs(bufferData.defaultUVs, options)
+    bufferData.uvs = bufferData.defaultUVs.slice(0)
+    bufferData.uvs = updateUVs(bufferData.uvs, options)
   }
 }
 

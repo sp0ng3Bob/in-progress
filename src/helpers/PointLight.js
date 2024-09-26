@@ -27,7 +27,7 @@ export function getNormalisedRGB(unsignedRGB) { return new Float32Array(unsigned
 export function getUnsignedRGB(normalisedRGB) { return new Float32Array(normalisedRGB.map(n => n * 255)) }
 export function getPositionNormalised(positionString) {
   return new Float32Array(
-    positionString.split(",").map(s => Number(s.replace("−", "-"))) //Number.parseFloat(s.replace("−", "-"))
+    positionString.split(",").map(s => Number(s.replace("−", "-")))
   )
 }
 export function getPositionString(position) { return position.join(", ") }

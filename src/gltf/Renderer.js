@@ -21,21 +21,12 @@ export class Renderer {
 
     this.gl.clearColor(0.89, 0.78, 0.78, 1)
 
-    //this.gl.enable(this.gl.CULL_FACE)
-    //this.gl.cullFace(this.gl.BACK)
     this.gl.enable(this.gl.DEPTH_TEST)
     this.gl.depthFunc(this.gl.LEQUAL)
     this.gl.frontFace(this.gl.CCW)
 
     // Disable color space conversion - https://registry.khronos.org/glTF/specs/2.0/glTF-2.0.html#images
-    gl.pixelStorei(gl.UNPACK_COLORSPACE_CONVERSION_WEBGL, gl.NONE)
-
-    // Texture global options
-    /*this.wrappingModeS = gl.REPEAT
-    this.wrappingModeT = gl.REPEAT
-    this.filteringModeMin = gl.NEAREST
-    this.filteringModeMag = gl.NEAREST
-    this.mipsEnabled = true*/
+    this.gl.pixelStorei(this.gl.UNPACK_COLORSPACE_CONVERSION_WEBGL, this.gl.NONE)
 
     // this is an application-scoped convention, matching the shader
     this.attributeNameToIndexMap = {
@@ -58,74 +49,69 @@ export class Renderer {
   }
 
   changeClearColor(color) {
-    const fraction = 1 / 255
-    this.gl.clearColor(color[0] * fraction, color[1] * fraction, color[2] * fraction, 1)
+    this.gl.clearColor(...color, 1)
   }
 
-  async updateBaseColorTexture(userData) {
+  updateBaseColorTexture(userData) {
     const image = userData.data
-    this.globalBaseColorTexture = WebGL.createTexture(this.gl, { image })
-    /*for (let o of this.glObjects.keys()) {
-      if (o.constructor.name === "Primitive" && o.material) {
-        const image = userData.data
-        o.material.baseColorTexture = WebGL.createTexture(this.gl, { image })
-      }
-    }*/
+    this.globalBaseColorTexture = WebGL.createTexture(this.gl, {
+      image,
+      unit: 0,
+      wrapS: this.gl.REPEAT,
+      wrapT: this.gl.REPEAT,
+      min: this.gl.LINEAR_MIPMAP_LINEAR,
+      mag: this.gl.LINEAR
+    })
   }
 
   setWrappingModeS(mode) {
-    //this.gl.activeTexture(this.gl.TEXTURE0)
-    for (let o of this.glObjects.values()) {
-      if (o instanceof WebGLSampler) {
-        this.gl.samplerParameteri(o, this.gl.TEXTURE_WRAP_S, mode)
-      } else if (o instanceof WebGLTexture) {
-        this.gl.bindTexture(this.gl.TEXTURE_2D, o)
-        this.gl.texParameteri(this.gl.TEXTURE_2D, this.gl.TEXTURE_WRAP_S, mode)
-      }
+    if (this.defaultSampler) {
+      const glSampler = this.glObjects.get(this.defaultSampler)
+      this.gl.samplerParameteri(glSampler, this.gl.TEXTURE_WRAP_S, mode)
     }
   }
 
   setWrappingModeT(mode) {
-    for (let o of this.glObjects.values()) {
-      if (o instanceof WebGLSampler) {
-        this.gl.samplerParameteri(o, this.gl.TEXTURE_WRAP_T, mode)
-      } else if (o instanceof WebGLTexture) {
-        this.gl.bindTexture(this.gl.TEXTURE_2D, o)
-        this.gl.texParameteri(this.gl.TEXTURE_2D, this.gl.TEXTURE_WRAP_T, mode)
-      }
+    if (this.defaultSampler) {
+      const glSampler = this.glObjects.get(this.defaultSampler)
+      this.gl.samplerParameteri(glSampler, this.gl.TEXTURE_WRAP_T, mode)
     }
   }
 
   setFilteringModeMin(mode) {
-    for (let o of this.glObjects.values()) {
-      if (o instanceof WebGLSampler) {
-        this.gl.samplerParameteri(o, this.gl.TEXTURE_MIN_FILTER, mode)
-      } else if (o instanceof WebGLTexture) {
-        this.gl.bindTexture(this.gl.TEXTURE_2D, o)
-        this.gl.texParameteri(this.gl.TEXTURE_2D, this.gl.TEXTURE_MIN_FILTER, mode)
-      }
+    if (this.defaultSampler) {
+      const glSampler = this.glObjects.get(this.defaultSampler)
+      this.gl.samplerParameteri(glSampler, this.gl.TEXTURE_MIN_FILTER, mode)
     }
   }
 
   setFilteringModeMag(mode) {
-    for (let o of this.glObjects.values()) {
-      if (o instanceof WebGLSampler) {
-        this.gl.samplerParameteri(o, this.gl.TEXTURE_MAG_FILTER, mode)
-      } else if (o instanceof WebGLTexture) {
-        this.gl.bindTexture(this.gl.TEXTURE_2D, o)
-        this.gl.texParameteri(this.gl.TEXTURE_2D, this.gl.TEXTURE_MAG_FILTER, mode)
-      }
+    if (this.defaultSampler) {
+      const glSampler = this.glObjects.get(this.defaultSampler)
+      this.gl.samplerParameteri(glSampler, this.gl.TEXTURE_MAG_FILTER, mode)
     }
   }
 
-  setMipMaps(mode, options) {
-    this.mips = mode
+  resetSampler() {
+    if (this.defaultSampler) {
+      const glSampler = this.glObjects.get(this.defaultSampler) //WebGL.createSampler(this.gl, this.defaultSampler)
+      //this.glObjects.set(this.defaultSampler, glSampler)
 
-    for (let o of this.glObjects.values()) {
-      if (o instanceof WebGLTexture) {
-        this.gl.bindTexture(this.gl.TEXTURE_2D, o)
-        this.gl.texParameteri(this.gl.TEXTURE_2D, this.gl.TEXTURE_MIN_FILTER, options.min)
-      }
+      this.gl.samplerParameteri(glSampler, this.gl.TEXTURE_WRAP_S, this.defaultSampler.wrapS)
+      this.gl.samplerParameteri(glSampler, this.gl.TEXTURE_WRAP_T, this.defaultSampler.wrapT)
+      this.gl.samplerParameteri(glSampler, this.gl.TEXTURE_MIN_FILTER, this.defaultSampler.min)
+      this.gl.samplerParameteri(glSampler, this.gl.TEXTURE_MAG_FILTER, this.defaultSampler.mag)
+
+      this.generateMipMapsForMainTexture()
+    }
+  }
+
+  generateMipMapsForMainTexture() {
+    if (this.defaultImage) {
+      const glTexture = this.glObjects.get(this.defaultImage)
+      this.gl.bindTexture(this.gl.TEXTURE_2D, glTexture)
+      this.gl.generateMipmap(this.gl.TEXTURE_2D)
+      //this.glObjects.set(this.defaultImage, glTexture)
     }
   }
 
@@ -169,6 +155,11 @@ export class Renderer {
   prepareTexture(texture, unit) {
     this.prepareSampler(texture.sampler)
     this.prepareImage(texture.image, { unit, ...texture.sampler })
+
+    if (unit === 0) {
+      this.defaultSampler = texture.sampler
+      this.defaultImage = texture.image
+    }
   }
 
   prepareMaterial(material) {
@@ -238,7 +229,7 @@ export class Renderer {
           // Create a new WebGL buffer with the expanded data
           const expandedBuffer = gl.createBuffer()
           gl.bindBuffer(bufferView.target, expandedBuffer)
-          gl.bufferData(bufferView.target, newBuffer, gl.STATIC_DRAW)
+          gl.bufferData(bufferView.target, newBuffer, gl.DYNAMIC_DRAW) //gl.STATIC_DRAW)
 
           // Set up the vertex attribute for vec4
           gl.enableVertexAttribArray(attributeIndex)
@@ -265,35 +256,6 @@ export class Renderer {
       }
     }
 
-    /*for (let target in primitive.targets) {
-      if (Number(target) < 2) {
-        for (let name in primitive.targets[target]) {
-          const accessor = primitive.targets[target][name]
-          const bufferView = accessor.bufferView
-          const attributeIndex = this.morphAttributeNameToIndexMap[name]
- 
-          if (attributeIndex !== undefined) {
-            if (!bufferView.target) {
-              bufferView.target = gl.ARRAY_BUFFER
-            }
- 
-            const buffer = this.prepareBufferView(bufferView)
-            gl.bindBuffer(bufferView.target, buffer)
-            gl.enableVertexAttribArray(attributeIndex)
-            gl.vertexAttribPointer(
-              attributeIndex,
-              accessor.numComponents,
-              accessor.componentType,
-              accessor.normalized,
-              bufferView.byteStride,
-              accessor.byteOffset)
-          }
-        }
-      }
-    }*/
-
-    //gl.bindVertexArray(null)
-    //gl.bindBuffer(gl.ARRAY_BUFFER, null)
     this.glObjects.set(primitive, vao)
     return vao
   }
@@ -324,9 +286,6 @@ export class Renderer {
     const gl = this.gl
     const MAX_LIGHTS = 8
 
-    //gl.useProgram(this.programs.gltf.program)
-    //gl.uniform3fv(this.programs.gltf.uniforms.uAmbientalColor, getNormalisedRGB(lights.ambientalColor))
-
     // Pre-fill arrays with default values
     const lightPositions = new Float32Array(MAX_LIGHTS * 3).fill(0)
     const lightColors = new Float32Array(MAX_LIGHTS * 3).fill(0)
@@ -337,7 +296,7 @@ export class Renderer {
 
     for (let l in lights.lights) {
       const lightIndex = Number(l)
-      if (lightIndex >= MAX_LIGHTS) { break }
+      //if (lightIndex >= MAX_LIGHTS) { break }
 
       const light = lights.lights[l]
       const pos = light.getPositionNormalised()
@@ -384,7 +343,7 @@ export class Renderer {
     return Math.sqrt(dx * dx + dy * dy + dz * dz)
   }
 
-  render(scene, camera, lights) { //premakni lights v scene...
+  render(scene, camera, lights) {
     const gl = this.gl
 
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT)
@@ -401,32 +360,28 @@ export class Renderer {
     gl.uniform1i(program.uniforms.uOcclusionTexture, 4)
 
     const vpMatrix = this.getViewProjectionMatrix(camera)
-    //const mvpMatrix = mat4.create()
-    //mat4.mul(mvpMatrix, vpMatrix, mat4.create())
 
-    /*let blendObjects = []
-    let allOtherObjects = []
-    for (let primitive of this.glObjects.keys()) {
-      if (primitive.constructor.name === "Primitive") {
-        if (primitive.material.alphaMode === "BLEND") {
-          blendObjects.push(primitive)
-        } else {
-          allOtherObjects.push(primitive)
-        }
-      }
-    }
-
-    blendObjects.sort((a, b) => {
-      const distanceA = calculateDistance(camera.translation, a.translation)
-      const distanceB = calculateDistance(camera.translation, b.translation)
+    /*scene.transparentNodes.sort((a, b) => {
+      const distanceA = this.calculateDistance(camera.translation, a.translation)
+      const distanceB = this.calculateDistance(camera.translation, b.translation)
       return distanceB - distanceA
     })*/
 
-    //const sortedNodes = [] // sort for when primitive is of alphaMode == BLEND
-
-    for (const node of scene.nodes) { //sortedNodes) {
+    /*for (const node of scene.opaqueNodes) {
       this.renderNode(scene.globalSampler, node, camera, vpMatrix)
     }
+    for (const node of scene.transparentNodes) {
+      this.renderNode(scene.globalSampler, node, camera, vpMatrix)
+    }*/
+    for (const node of scene.nodes) {
+      this.renderNode(node, camera, vpMatrix)
+    }
+    /*for (const node of scene.nodes) {
+      this.renderNode("opaquePrimitives", scene.globalSampler, node, camera, vpMatrix)
+    }
+    for (const node of scene.nodes) {
+      this.renderNode("transparentPrimitives", scene.globalSampler, node, camera, vpMatrix)
+    }*/
 
     program = this.programs.geo
     gl.useProgram(program.program)
@@ -435,24 +390,21 @@ export class Renderer {
     gl.disable(gl.CULL_FACE)
 
     for (const light of scene.lights) {
-      this.renderGeoNode(scene.globalSampler, light, "geo", vpMatrix)
+      this.renderGeoNode(light, "geo", vpMatrix)
     }
 
     for (const geo of scene.geoNodes) {
-      this.renderGeoNode(scene.globalSampler, geo, "geo", vpMatrix)
+      this.renderGeoNode(geo, "geo", vpMatrix)
     }
   }
 
-  renderGeoNode(globalSampler, geoBuffers, prog, vpMatrix) {
+  renderGeoNode(geoBuffers, prog, vpMatrix) {
     const gl = this.gl
 
     const mvMatrix = mat4.create()
 
     const mvpMatrix = mat4.create()
     mat4.mul(mvpMatrix, vpMatrix, mvMatrix)
-
-    //update geometry - bufferData and the buffers
-    //update texture with texture mapping options
 
     // Use shader program
     const program = this.programs[prog]
@@ -481,11 +433,12 @@ export class Renderer {
       gl.activeTexture(gl.TEXTURE0)
       gl.bindTexture(gl.TEXTURE_2D, geoBuffers.texture)
 
-      if (globalSampler) {
+      gl.bindSampler(0, geoBuffers.sampler)
+      /*if (globalSampler) {
         gl.bindSampler(0, globalSampler)
       } else {
         gl.bindSampler(0, geoBuffers.sampler)
-      }
+      }*/
 
       gl.uniform1i(program.uniforms.uHasBaseColorTexture, 1)
     } else {
@@ -495,7 +448,8 @@ export class Renderer {
     gl.drawElements(gl.TRIANGLES, geoBuffers.indexCount, gl.UNSIGNED_SHORT, 0)
   }
 
-  renderNode(globalSampler, node, camera, vpMatrix, mvMatrix = mat4.create()) {
+  //renderNode(primitiveKind, globalSampler, node, camera, vpMatrix, mvMatrix = mat4.create()) {
+  renderNode(node, camera, vpMatrix, mvMatrix = mat4.create()) {
     const gl = this.gl
 
     mvMatrix = mat4.clone(mvMatrix)
@@ -518,7 +472,7 @@ export class Renderer {
     }
 
     if (node.mesh) {
-      //gl.uniform3fv(program.uniforms.uCameraPosition, camera.translation)
+      gl.uniform3fv(program.uniforms.uCameraPosition, camera.translation)
       gl.uniformMatrix4fv(program.uniforms.uModelMatrix, false, mvMatrix)
       gl.uniformMatrix4fv(program.uniforms.uMvpMatrix, false, mvpMatrix)
 
@@ -531,17 +485,28 @@ export class Renderer {
       gl.uniform1f(program.uniforms.uMorphTargetWeight0, w0)
       gl.uniform1f(program.uniforms.uMorphTargetWeight1, w1)
 
-      for (const primitive of node.mesh.primitives) {
-        this.renderPrimitive(primitive, globalSampler)
+      //https://github.com/KhronosGroup/glTF-Sample-Renderer/blob/4c87bce87b43dd85dd4b7133bfdb638ee2be34a8/source/Renderer/renderer.js
+      if (mat4.determinant(mvMatrix) < 0.0) {
+        gl.frontFace(gl.CW)
+      } else {
+        gl.frontFace(gl.CCW)
       }
+
+      for (const primitive of node.mesh.primitives) {
+        this.renderPrimitive(primitive)
+      }
+      /*for (const primitive of node.mesh[primitiveKind]) {
+        this.renderPrimitive(primitive, globalSampler)
+      }*/
     }
 
     for (const child of node.children) {
-      this.renderNode(globalSampler, child, camera, vpMatrix, mvMatrix)
+      //this.renderNode(primitiveKind, globalSampler, child, camera, vpMatrix, mvMatrix)
+      this.renderNode(child, camera, vpMatrix, mvMatrix)
     }
   }
 
-  renderPrimitive(primitive, globalSampler) {
+  renderPrimitive(primitive) {
     const gl = this.gl
 
     const vao = this.glObjects.get(primitive)
@@ -559,19 +524,12 @@ export class Renderer {
       gl.disable(gl.CULL_FACE)
     } else {
       gl.enable(gl.CULL_FACE)
-      gl.cullFace(gl.BACK)
     }
 
     if (primitive.attributes["COLOR_0"]) {
       gl.uniform1i(this.programs.gltf.uniforms.uHasColor0, 1)
     } else {
       gl.uniform1i(this.programs.gltf.uniforms.uHasColor0, 0)
-    }
-
-    if (primitive.attributes["TEXCOORD_1"]) {
-      gl.uniform1i(this.programs.gltf.uniforms.uHasTexCoord1, 1)
-    } else {
-      gl.uniform1i(this.programs.gltf.uniforms.uHasTexCoord1, 0)
     }
 
     if (material.alphaMode === "OPAQUE") { // Enable writing to the depth buffer
@@ -582,17 +540,12 @@ export class Renderer {
       gl.disable(gl.BLEND)
       gl.depthMask(true)
       gl.uniform1i(this.programs.gltf.uniforms.uAlphaMode, 1)
-    } else if (material.alphaMode === "BLEND") { // Disable writing to the depth buffer
+    } else if (material.alphaMode === "BLEND") {
       gl.enable(gl.BLEND)
       gl.depthMask(false)
-
       // Using the "over" operator - https://dl.acm.org/doi/pdf/10.1145/964965.808606
-      //gl.blendFunc(gl.SRC_APLHA, gl.ONE_MINUS_SRC_ALPHA) // (0,A,B,A)
-      //gl.blendFunc(gl.ONE_MINUS_DST_ALPHA, gl.ONE) // (0,A,B,B)
-      //gl.blendFuncSeparate(gl.ZERO, gl.SRC_COLOR, gl.DST_ALPHA, gl.SRC_ALPHA);
-      //gl.blendFuncSeparate(gl.ZERO, gl.SRC_COLOR, gl.DST_COLOR, gl.DST_ALPHA);
-
-      gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA)
+      gl.blendFuncSeparate(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA, gl.ONE, gl.ONE_MINUS_SRC_ALPHA)
+      gl.blendEquation(gl.FUNC_ADD)
       gl.uniform1i(this.programs.gltf.uniforms.uAlphaMode, 2)
       //the primitives that have the aplhaMode set to BLEND should be sorted based on the distance from the camera
     }
@@ -602,7 +555,7 @@ export class Renderer {
     if (material.baseColorTexture !== null) {
       texture = material.baseColorTexture
       glTexture = this.globalBaseColorTexture ? this.globalBaseColorTexture : this.glObjects.get(texture.image)
-      glSampler = globalSampler ? globalSampler : this.glObjects.get(texture.sampler)
+      glSampler = this.glObjects.get(texture.sampler)
 
       gl.activeTexture(gl.TEXTURE0)
       gl.bindTexture(gl.TEXTURE_2D, glTexture)
@@ -672,18 +625,26 @@ export class Renderer {
       gl.uniform1i(this.programs.gltf.uniforms.uHasOcclusionTexture, 0)
     }
 
+    gl.uniform1i(this.programs.gltf.uniforms.uBaseColorTexCoord, material.baseColorTexCoord)
+    gl.uniform1i(this.programs.gltf.uniforms.uNormalTexCoord, material.normalTexCoord)
+    gl.uniform1i(this.programs.gltf.uniforms.uMetallicRoughnessTexCoord, material.metallicRoughnessTexCoord)
+    gl.uniform1i(this.programs.gltf.uniforms.uEmissiveTexCoord, material.emissiveTexCoord)
+    gl.uniform1i(this.programs.gltf.uniforms.uOcclusionTexCoord, material.occlusionTexCoord)
+
     //Drawing
     if (primitive.indices) {
       const mode = primitive.mode
       const count = primitive.indices.count
       const type = primitive.indices.componentType
-      gl.drawElements(mode, count, type, 0)
-      //gl.drawElements(gl.LINES, count, type, 0)
+      const offset = primitive.indices.byteOffset
+      gl.drawElements(mode, count, type, offset)
     } else {
       const mode = primitive.mode
       const count = primitive.attributes.POSITION.count
       gl.drawArrays(mode, 0, count)
+
+      //const offset = primitive.attributes.POSITION.byteOffset
+      //gl.drawArrays(mode, offset, count)
     }
   }
-
 }

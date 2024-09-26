@@ -35,4 +35,10 @@ export class Material {
     this.alphaCutoff = options.alphaCutoff ?? 0.5 //options.alphaCutoff !== undefined ? options.alphaCutoff : 0.5
     this.doubleSided = options.doubleSided ?? false
   }
+
+  clone() {
+    return new Material({
+      ...this
+    })
+  }
 }
