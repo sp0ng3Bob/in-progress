@@ -49,7 +49,7 @@ out vec3 vFragPosition;
 void main() {
   gl_PointSize = 5.0;
   gl_Position = uMvpMatrix * vec4(aPosition, 1.0);
-  vNormal = aNormal; //(uModelMatrix * vec4(aNormal, 0.0)).xyz;
+  vNormal = (transpose(inverse(uModelMatrix)) * vec4(aNormal, 0.0)).xyz;
   vTexCoord = aTexCoord;
   vTexCoord1 = aTexCoord1;
   vTangent = aTangent;
@@ -200,7 +200,9 @@ void main() {
   if (uHasEmissiveTexture == 1) {
     vec3 emissive = texture(uEmissiveTexture, textureCoords).rgb * uEmissiveFactor;
     finalColor += emissive;
-  }
+  } /*else {
+    finalColor += uEmissiveFactor;
+  }*/
 
   // Occlusion map
   textureCoords = (uOcclusionTexCoord == 1) ? vTexCoord1 : vTexCoord;
@@ -230,9 +232,11 @@ out vec3 vNormal;
 void main() {
   gl_PointSize = 5.0;
   gl_Position = uMvpMatrix * vec4(aPosition, 1.0);
-  vNormal = aNormal; //(uModelMatrix * vec4(aNormal, 0.0)).xyz;
+  vNormal = (transpose(inverse(uModelMatrix)) * vec4(aNormal, 0.0)).xyz;
   vTexCoord = aTexCoord;
-  vFragPosition = (uModelMatrix * vec4(aPosition, 1.0)).xyz;
+  
+  vec4 worldPosition = (uModelMatrix * vec4(aPosition, 1.0));
+  vFragPosition = worldPosition.xyz / worldPosition.w;
 }`
 
 const geoFragment = `#version 300 es

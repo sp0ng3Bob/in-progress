@@ -569,7 +569,7 @@ export class Renderer {
     if (material.normalTexture !== null) {
       texture = material.normalTexture
       glTexture = this.glObjects.get(texture.image)
-      glSampler = globalSampler ? globalSampler : this.glObjects.get(texture.sampler)
+      glSampler = this.glObjects.get(texture.sampler)
 
       gl.activeTexture(gl.TEXTURE1)
       gl.bindTexture(gl.TEXTURE_2D, glTexture)
@@ -584,7 +584,7 @@ export class Renderer {
     if (material.emissiveTexture !== null) {
       texture = material.emissiveTexture
       glTexture = this.glObjects.get(texture.image)
-      glSampler = globalSampler ? globalSampler : this.glObjects.get(texture.sampler)
+      glSampler = this.glObjects.get(texture.sampler)
 
       gl.activeTexture(gl.TEXTURE2)
       gl.bindTexture(gl.TEXTURE_2D, glTexture)
@@ -599,7 +599,7 @@ export class Renderer {
     if (material.metallicRoughnessTexture !== null) {
       texture = material.metallicRoughnessTexture
       glTexture = this.glObjects.get(texture.image)
-      glSampler = globalSampler ? globalSampler : this.glObjects.get(texture.sampler)
+      glSampler = this.glObjects.get(texture.sampler)
 
       gl.activeTexture(gl.TEXTURE3)
       gl.bindTexture(gl.TEXTURE_2D, glTexture)
@@ -613,7 +613,7 @@ export class Renderer {
     if (material.occlusionTexture !== null) {
       texture = material.occlusionTexture
       glTexture = this.glObjects.get(texture.image)
-      glSampler = globalSampler ? globalSampler : this.glObjects.get(texture.sampler)
+      glSampler = this.glObjects.get(texture.sampler)
 
       gl.activeTexture(gl.TEXTURE4)
       gl.bindTexture(gl.TEXTURE_2D, glTexture)

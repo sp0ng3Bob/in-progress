@@ -95,8 +95,8 @@ function applyTransformations(pos, norm, T, R) {
   const transformMatrix = mat4.create()
   mat4.fromRotationTranslationScale(transformMatrix, R, T, [1, 1, 1])
 
-  const onlyRotateMatrix = mat4.create()
-  mat4.fromRotationTranslationScale(onlyRotateMatrix, R, [0, 0, 0], [1, 1, 1])
+  //const onlyRotateMatrix = mat4.create()
+  //mat4.fromRotationTranslationScale(onlyRotateMatrix, R, [0, 0, 0], [1, 1, 1])
 
   const transformedPositions = []
   const transformedNormals = []
@@ -105,14 +105,14 @@ function applyTransformations(pos, norm, T, R) {
     vec3.transformMat4(vertex, vertex, transformMatrix)
     transformedPositions.push(...vertex)
 
-    const normal = vec3.fromValues(norm[i], norm[i + 1], norm[i + 2])
-    vec3.transformMat4(normal, normal, onlyRotateMatrix)
-    transformedNormals.push(...normal)
+    //const normal = vec3.fromValues(norm[i], norm[i + 1], norm[i + 2])
+    //vec3.transformMat4(normal, normal, onlyRotateMatrix)
+    //transformedNormals.push(...normal)
   }
 
   return {
     positions: new Float32Array(transformedPositions),
-    normals: new Float32Array(transformedNormals)
+    //normals: new Float32Array(transformedNormals)
   }
 }
 
@@ -144,9 +144,10 @@ function createPlaneGeometry(size = 1, position = [0, 0, 0], rotation = [0, 0, 0
     0, 0  // bottom-left
   ])
 
-  const { positions, normals } = applyTransformations(defaultPositions, defaultNormals, position, rotation)
+  //const { positions, normals } = applyTransformations(defaultPositions, defaultNormals, position, rotation)
+  const { positions } = applyTransformations(defaultPositions, defaultNormals, position, rotation)
 
-  return { positions, normals, indices, uvs }
+  return { positions, normals: new Float32Array(defaultNormals), indices, uvs }
 }
 
 function createCubeGeometry(size = 1, position = [0, 0, 0], rotation = [0, 0, 0, 1]) {
@@ -199,11 +200,12 @@ function createCubeGeometry(size = 1, position = [0, 0, 0], rotation = [0, 0, 0,
     20, 21, 22, 20, 22, 23  // left
   ])
 
-  const { positions, normals } = applyTransformations(defaultPositions, defaultNormals, position, rotation)
+  //const { positions, normals } = applyTransformations(defaultPositions, defaultNormals, position, rotation)
+  const { positions } = applyTransformations(defaultPositions, defaultNormals, position, rotation)
 
   return {
     positions,
-    normals,
+    normals: new Float32Array(defaultNormals),
     indices,
     uvs: new Float32Array(uvs)
   }
@@ -248,11 +250,12 @@ function createSphereGeometry(radius = 1, position = [0, 0, 0], rotation = [0, 0
     }
   }
 
-  const { positions, normals } = applyTransformations(defaultPositions, defaultNormals, position, rotation)
+  //const { positions, normals } = applyTransformations(defaultPositions, defaultNormals, position, rotation)
+  const { positions } = applyTransformations(defaultPositions, defaultNormals, position, rotation)
 
   return {
     positions,
-    normals,
+    normals: new Float32Array(defaultNormals),
     indices: new Uint16Array(indices),
     uvs: new Float32Array(uvs)
   }
@@ -299,11 +302,12 @@ function createTorusGeometry(outerRadius = 1, innerRadius = 0.4, position = [0, 
     }
   }
 
-  const { positions, normals } = applyTransformations(defaultPositions, defaultNormals, position, rotation)
+  //const { positions, normals } = applyTransformations(defaultPositions, defaultNormals, position, rotation)
+  const { positions } = applyTransformations(defaultPositions, defaultNormals, position, rotation)
 
   return {
     positions,
-    normals,
+    normals: new Float32Array(defaultNormals),
     indices: new Uint16Array(indices),
     uvs: new Float32Array(uvs)
   }
