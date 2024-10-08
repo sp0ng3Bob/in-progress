@@ -175,9 +175,9 @@ export function updateMapping(bufferData, options, type) {
 }
 
 function updateUVs(uvs, options) {
-  uvs = translateUVs(uvs, options.translateX, options.translateY)
   uvs = rotateUVs(uvs, options.rotate)
   uvs = scaleUVs(uvs, options.scaleX, options.scaleY)
+  uvs = translateUVs(uvs, options.translateX, options.translateY)
   return uvs
 }
 
