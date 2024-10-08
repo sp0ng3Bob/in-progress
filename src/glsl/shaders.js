@@ -227,13 +227,16 @@ uniform mat4 uModelMatrix;
 
 out vec3 vFragPosition;
 out vec2 vTexCoord;
+out float vInverseW;
 out vec3 vNormal;
 
 void main() {
   gl_PointSize = 5.0;
   gl_Position = uMvpMatrix * vec4(aPosition, 1.0);
   vNormal = (transpose(inverse(uModelMatrix)) * vec4(aNormal, 0.0)).xyz;
-  vTexCoord = aTexCoord;
+  
+  vInverseW = 1.0 / gl_Position.w;
+  vTexCoord = aTexCoord * vInverseW;
   
   vec4 worldPosition = (uModelMatrix * vec4(aPosition, 1.0));
   vFragPosition = worldPosition.xyz / worldPosition.w;
@@ -267,6 +270,7 @@ uniform vec3 uCameraPosition;
 in vec3 vFragPosition;
 
 in vec2 vTexCoord;
+in float vInverseW;
 in vec3 vNormal;
 
 out vec4 oColor;
@@ -274,8 +278,9 @@ out vec4 oColor;
 void main() {
   vec3 albedo = uBaseColor.rgb * uAmbientalColor;
 
+  vec2 texCoord = vTexCoord / vInverseW;
   if (uHasBaseColorTexture == 1) {
-    albedo *= texture(uTexture, vTexCoord).rgb;
+    albedo *= texture(uTexture, texCoord).rgb;
   }
 
   vec3 normal = normalize(vNormal);

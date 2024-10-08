@@ -159,7 +159,7 @@ export class App extends Application {
         textureBlob: undefined,
         textureMapping: {
           mapping: "default UV",
-          projectionDirection: [1, 0, 0],
+          projectionDirection: [0, 0, 1],
           translateX: 0,
           translateY: 0,
           rotate: 0,
@@ -218,16 +218,18 @@ export class App extends Application {
 
     this.addPointLight("5,2,0", [255, 120, 120])
     this.addPointLight("2.5,2,4.3301", [100, 255, 100])
-    this.addPointLight("−2.5,2,4.3301", [127, 127, 255])
+    //this.addPointLight("−2.5,2,4.3301", [127, 127, 255])
     this.addPointLight("−5,2,0", [200, 120, 200])
-    this.addPointLight("−2.5,2,−4.3301", [255, 120, 120])
+    //this.addPointLight("−2.5,2,−4.3301", [255, 120, 120])
     this.addPointLight("2.5,2,−4.3301", [100, 255, 100])
 
     //debuging lights
-    this.state.newGeoObject.size = 6
-    this.state.newGeoObject.position = "0, 0, 0"
-    this.state.newGeoObject.rotation = "0.7071, 0, 0, 0.7071"
-    this.addGeoPlane()
+    this.state.newGeoObject.size = 2
+    //this.state.newGeoObject.position = "0, 0, 0"
+    //this.state.newGeoObject.rotation = "0.7071, 0, 0, 0.7071"
+    //this.state.newGeoObject.lat = 6
+    //this.state.newGeoObject.lon = 6
+    this.addGeoSphere()
 
     this.initGUI()
   }
@@ -371,8 +373,8 @@ export class App extends Application {
     const addGeoGeometryFolder = addGeoFolder.addFolder("Geometry")
     const geoSize = addGeoGeometryFolder.add(this.state.newGeoObject, "size", 0.5, 10, 0.1).name("Size").listen()
     const geoInnerHole = addGeoGeometryFolder.add(this.state.newGeoObject, "innerHole", 0.1, 2.5, 0.1).name("Tube radius").listen()
-    const geoLatBands = addGeoGeometryFolder.add(this.state.newGeoObject, "lat", 6, 360, 1).name("Lat. bands").listen()
-    const geoLonBands = addGeoGeometryFolder.add(this.state.newGeoObject, "lon", 6, 360, 1).name("Lon. bands").listen()
+    const geoLatBands = addGeoGeometryFolder.add(this.state.newGeoObject, "lat", 6, 180, 1).name("Lat. bands").listen()
+    const geoLonBands = addGeoGeometryFolder.add(this.state.newGeoObject, "lon", 6, 180, 1).name("Lon. bands").listen()
     const geoPosition = addGeoGeometryFolder.add(this.state.newGeoObject, "position").name("Position").listen()
     const geoRotation = addGeoGeometryFolder.add(this.state.newGeoObject, "rotation").name("Rotation").listen()
     const geoColor = addGeoGeometryFolder.addColor(this.state.newGeoObject, "color").name("Base color").listen()
@@ -551,8 +553,8 @@ export class App extends Application {
         geoGeometryFolder.add(proceduralModelsList[geoIndex].geometry, "innerHole", 0.1, 2.5, 0.1).name("Tube radius").listen().onChange((value) => this.updateGeoModelBuffers(geoIndex, { "innerHole": value }))
       }
       if (["Torus", "Sphere"].some(t => proceduralModelsList[geoIndex].type.includes(t))) {
-        geoGeometryFolder.add(proceduralModelsList[geoIndex].geometry, "lat", 6, 360, 1).name("Lat. bands").listen().onChange((value) => this.updateGeoModelBuffers(geoIndex, { "lat": value }))
-        geoGeometryFolder.add(proceduralModelsList[geoIndex].geometry, "lon", 6, 360, 1).name("Lon. bands").listen().onChange((value) => this.updateGeoModelBuffers(geoIndex, { "lon": value }))
+        geoGeometryFolder.add(proceduralModelsList[geoIndex].geometry, "lat", 6, 180, 1).name("Lat. bands").listen().onChange((value) => this.updateGeoModelBuffers(geoIndex, { "lat": value }))
+        geoGeometryFolder.add(proceduralModelsList[geoIndex].geometry, "lon", 6, 180, 1).name("Lon. bands").listen().onChange((value) => this.updateGeoModelBuffers(geoIndex, { "lon": value }))
       }
       geoGeometryFolder.add(proceduralModelsList[geoIndex].geometry, "position").name("Position").listen().onChange((value) => this.updateGeoModelBuffers(geoIndex, { "position": value }))
       geoGeometryFolder.add(proceduralModelsList[geoIndex].geometry, "rotation").name("Rotation").listen().onChange((value) => this.updateGeoModelBuffers(geoIndex, { "rotation": value }))
@@ -567,6 +569,7 @@ export class App extends Application {
         if (!tmpToPreventFileChooserPopup) {
           if (value === "From a local file") {
             this.userGeoTextureMappingFile(geoIndex)
+            geoTextureFolderTmp.__controllers[3].__li.style.display = "none"
           } else if (value === "default UV") {
             geoTextureFolderTmp.__controllers[3].__li.style.display = "none"
           } else {
@@ -582,8 +585,8 @@ export class App extends Application {
       geoTextureFolderTmp.add(proceduralModelsList[geoIndex].texturing.textureMappings, "rotate", 0, Math.PI * 2, 0.01).onChange((value) => this.updateGeoModelTextureMapping(geoIndex, { "rotate": value }))
       geoTextureFolderTmp.add(proceduralModelsList[geoIndex].texturing.textureMappings, "scaleX", 0.1, 2).onChange((value) => this.updateGeoModelTextureMapping(geoIndex, { "scaleX": value }))
       geoTextureFolderTmp.add(proceduralModelsList[geoIndex].texturing.textureMappings, "scaleY", 0.1, 2).onChange((value) => this.updateGeoModelTextureMapping(geoIndex, { "scaleY": value }))
-      updateTextureMappingsUI(proceduralModelsList[geoIndex].texturing.textureMappings.mapping)
       tmpToPreventFileChooserPopup = false
+      updateTextureMappingsUI(proceduralModelsList[geoIndex].texturing.textureMappings.mapping)
 
       const geoShadingModel = modelFolder.addFolder("Shading model")
       const updateShadingModelUI = () => {
@@ -1076,6 +1079,7 @@ export class App extends Application {
   mappingChanged(val) {
     if (val === "From a local file") {
       this.userGeoTextureMappingFile()
+      this.geometryActions[2][0].__li.style.display = "none"
     } else if (val === "default UV") {
       this.geometryActions[2][0].__li.style.display = "none"
       this.state.newGeoObject.textureMappingsFromUser = undefined

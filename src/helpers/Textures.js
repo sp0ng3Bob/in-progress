@@ -8,26 +8,38 @@ const quat = glMatrix.quat
 function calculatePlanarMapping(vertices, projectionDirection = [0, 0, 1]) {
   const uvs = []
 
-  // Step 1: Normalize the projection direction
-  const projDir = vec3.normalize(vec3.create(), projectionDirection)
-  const alignDirection = vec3.fromValues(0, 1, 0) // Y-axis for planar projection
+  const projDir = vec3.create()
+  vec3.normalize(projDir, projectionDirection)
+  const alignDirection = vec3.fromValues(0, 1, 0)
 
-  // Step 2: Calculate the quaternion that rotates projDir to alignDirection
   const rotationQuat = quat.create()
   quat.rotationTo(rotationQuat, projDir, alignDirection)
 
-  // Step 3: Convert quaternion to a rotation matrix
   const rotationMatrix = mat4.fromQuat(mat4.create(), rotationQuat)
 
   for (let i = 0; i < vertices.length; i += 3) {
     const vertex = vec3.fromValues(vertices[i], vertices[i + 1], vertices[i + 2])
-
-    // Step 4: Transform the vertex to align with the projection direction
     vec3.transformMat4(vertex, vertex, rotationMatrix)
-
-    // Step 5: Use x and z for UV mapping
     uvs.push(vertex[0] * 0.5 + 0.5, vertex[2] * 0.5 + 0.5)
   }
+
+  /*let min = vec3.fromValues(Infinity, Infinity, Infinity)
+  let max = vec3.fromValues(-Infinity, -Infinity, -Infinity)
+  const newVertices = []
+  for (let i = 0; i < vertices.length; i += 3) {
+    const vertex = vec3.fromValues(vertices[i], vertices[i + 1], vertices[i + 2])
+    vec3.transformMat4(vertex, vertex, rotationMatrix)
+    newVertices.push(...vertex)
+    vec3.min(min, min, vertex)
+    vec3.max(max, max, vertex)
+  }
+
+  for (let i = 0; i < vertices.length; i += 3) {
+    const newVertex = [newVertices[i], newVertices[i + 1], newVertices[i + 2]]
+    const u = (newVertex[0] - min[0]) / (max[0] - min[0])
+    const v = (newVertex[2] - min[2]) / (max[2] - min[2])
+    uvs.push(u, v)
+  }*/
 
   return new Float32Array(uvs)
 }
@@ -35,28 +47,33 @@ function calculatePlanarMapping(vertices, projectionDirection = [0, 0, 1]) {
 function calculateCylindricalMapping(vertices, projectionDirection = [0, 0, 1]) {
   const uvs = []
 
-  // Step 1: Normalize the projection direction
-  const projDir = vec3.normalize(vec3.create(), projectionDirection)
-  const alignDirection = vec3.fromValues(0, 1, 0) // Y-axis for cylindrical projection
+  const projDir = vec3.create()
+  vec3.normalize(projDir, projectionDirection)
+  const alignDirection = vec3.fromValues(0, 1, 0)
 
-  // Step 2: Calculate the quaternion that rotates projDir to alignDirection
   const rotationQuat = quat.create()
   quat.rotationTo(rotationQuat, projDir, alignDirection)
 
-  // Step 3: Convert quaternion to a rotation matrix
   const rotationMatrix = mat4.fromQuat(mat4.create(), rotationQuat)
 
+  let min = vec3.fromValues(Infinity, Infinity, Infinity)
+  let max = vec3.fromValues(-Infinity, -Infinity, -Infinity)
+  const newVertices = []
   for (let i = 0; i < vertices.length; i += 3) {
     const vertex = vec3.fromValues(vertices[i], vertices[i + 1], vertices[i + 2])
-
-    // Step 4: Transform the vertex to align with the projection direction
     vec3.transformMat4(vertex, vertex, rotationMatrix)
+    newVertices.push(...vertex)
+    vec3.min(min, min, vertex)
+    vec3.max(max, max, vertex)
+  }
 
-    // Step 5: Compute theta (angle) and v for cylindrical mapping
-    const theta = Math.atan2(vertex[2], vertex[0])
-    const v = vertex[1] * 0.5 + 0.5 // Y axis
-
-    uvs.push((theta + Math.PI) / (2 * Math.PI), v)
+  for (let i = 0; i < vertices.length; i += 3) {
+    const newVertex = [newVertices[i], newVertices[i + 1], newVertices[i + 2]]
+    const theta = Math.atan2(newVertex[2], newVertex[0])
+    const u = (theta + Math.PI) / (2 * Math.PI)
+    //const v = (newVertex[2] - min[2]) / (max[2] - min[2])
+    const v = (newVertex[1] - min[1]) / (max[1] - min[1] || 1)
+    uvs.push(u, v)
   }
 
   return new Float32Array(uvs)
@@ -65,29 +82,27 @@ function calculateCylindricalMapping(vertices, projectionDirection = [0, 0, 1]) 
 function calculateSphericalMapping(vertices, projectionDirection = [0, 0, 1]) {
   const uvs = []
 
-  // Step 1: Normalize the projection direction
-  const projDir = vec3.normalize(vec3.create(), projectionDirection)
-  const alignDirection = vec3.fromValues(0, 1, 0) // Y-axis for spherical projection
+  const projDir = vec3.create()
+  vec3.normalize(projDir, projectionDirection)
+  const alignDirection = vec3.fromValues(0, 1, 0)
 
-  // Step 2: Calculate the quaternion that rotates projDir to alignDirection
   const rotationQuat = quat.create()
   quat.rotationTo(rotationQuat, projDir, alignDirection)
 
-  // Step 3: Convert quaternion to a rotation matrix
   const rotationMatrix = mat4.fromQuat(mat4.create(), rotationQuat)
 
   for (let i = 0; i < vertices.length; i += 3) {
     const vertex = vec3.fromValues(vertices[i], vertices[i + 1], vertices[i + 2])
 
-    // Step 4: Transform the vertex to align with the projection direction
     vec3.transformMat4(vertex, vertex, rotationMatrix)
 
-    // Step 5: Compute spherical coordinates
     const length = vec3.length(vertex)
-    const theta = Math.atan2(vertex[2], vertex[0]) // X and Z
-    const phi = Math.acos(vertex[1] / length) // Y
+    const theta = Math.atan2(vertex[2], vertex[0])
+    const phi = Math.acos(vertex[1] / length)
 
-    uvs.push((theta + Math.PI) / (2 * Math.PI), phi / Math.PI)
+    const u = (theta + Math.PI) / (2 * Math.PI)
+    const v = phi / Math.PI
+    uvs.push(u, v)
   }
 
   return new Float32Array(uvs)
@@ -104,8 +119,8 @@ function translateUVs(uvs, tx, ty) {
 
 function scaleUVs(uvs, sx, sy) {
   for (let i = 0; i < uvs.length; i += 2) {
-    uvs[i] *= sx
-    uvs[i + 1] *= sy
+    uvs[i] *= 1 / sx
+    uvs[i + 1] *= 1 / sy
   }
   return uvs
 }
@@ -114,10 +129,11 @@ function rotateUVs(uvs, angle) {
   const cosA = Math.cos(angle)
   const sinA = Math.sin(angle)
   for (let i = 0; i < uvs.length; i += 2) {
-    const x = uvs[i]
-    const y = uvs[i + 1]
-    uvs[i] = cosA * x - sinA * y
-    uvs[i + 1] = sinA * x + cosA * y
+    const x = uvs[i] - 0.5
+    const y = uvs[i + 1] - 0.5
+
+    uvs[i] = cosA * x - sinA * y + 0.5
+    uvs[i + 1] = sinA * x + cosA * y + 0.5
   }
   return uvs
 }
